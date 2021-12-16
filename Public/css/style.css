@@ -1,0 +1,491 @@
+@define-color Theme-color red;
+
+/* :root{
+  --background-color: #24252A;
+  --button-color: #303030;
+  --button-disable-color:#444444;
+  --textarea-color-hover: #D3D3D3;
+  --ta-background-color: #C0C0C0;
+  --settings-background-color: #444444;
+  --panel-color:#303035;
+  --splitter-color: #4e4e4e;
+  --TT-color: #A00000;
+  --text-color:white;
+  --text-color-dark:black;
+} */
+
+@import "fonts.css";
+@import "colors.css";
+
+.state-err{
+  color: black;
+  background: magenta;
+  padding: 5px;
+  text-decoration: none;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.state-on{
+  color: black;
+  background: red;
+  padding: 5px;
+  text-decoration: none;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.state-blue{
+  color: black;
+  background: blue;
+  padding: 5px;
+  text-decoration: none;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.state-alarm{
+  color: black;
+  background: rgb(248, 181, 57);
+  padding: 5px;
+  text-decoration: none;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.state-off{
+  color: black;
+  background: darkgreen;
+  padding: 5px;
+  text-decoration: none;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.state-control{
+   /* text color: color: magenta;*/
+   /* background color: background-color: #0F4C85;*/
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.run-button{
+  color:magenta;
+  background:green;
+  background-color: #0F4C85;
+  padding: 5px;
+  text-decoration: none;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.list-select{
+  color: black;
+  padding: 5px;
+  text-decoration: none;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+
+.label {
+  color: white;
+  /*background-color: #0F4C85;
+  border: 4px solid #24252A;
+  border-radius: 10px;*/
+  transition: all 0.3s ease 0s;
+}
+
+.builder-highlight{
+  border: 4px solid rgb(248, 248, 125);
+  border-radius: 4px;
+}
+.builder-see-through{
+  background: rgba(0, 0, 0, 0);
+}
+
+.red-seperator {
+  color: red;
+  background: red;
+}
+
+.red-style {
+    background-image: linear-gradient(@Theme-color, black);
+    color:white; /* text color*/
+    border-style: solid;
+    border-width: 2px;
+    border-color: #282828;
+}
+
+.blue-style {
+  background-image: linear-gradient( #0F4C85, black);
+  color:white; /* text color*/
+  border-style: solid;
+  border-width: 2px;
+  border-color: #282828;
+}
+.blink-style{
+  opacity: 0.1;
+}
+
+ :hover{
+   opacity: 0.65;
+ }
+
+.dark-gray-bg{
+  background: rgb(41, 41, 41);
+}
+
+.gray-bg{
+  background: gray;
+  border-style: solid;
+  border-width: 4px;
+  border-color: black;
+  border-radius: 4px;
+}
+
+.config-list-box{
+  border-style: solid;
+  border-width: 1px;
+  border-color:  rgb(41, 41, 41);
+}
+
+.list-box-odd-row{
+  background-color: darkgray;
+  color: white;
+  border-style: solid;
+  border-width: 1px;
+  border-color:  rgb(41, 41, 41);
+}
+
+.list-box-even-row{
+  background-color:gray;
+  color: white;
+  border-style: solid;
+  border-width: 1px;
+  border-color:  rgb(41, 41, 41);
+}
+
+.list-box-header{
+  background:rgb(55, 55, 55);
+  color: White;
+  border-style: solid;
+  border-width: 1px;
+  border-color:  rgb(41, 41, 41);
+}
+
+.dialog-buttons{
+  background-image: linear-gradient( gray, rgb(55, 55, 55));
+  border-style: solid;
+  border-width: 4px;
+  border-color:  rgb(41, 41, 41);
+  border-radius: 4px;
+}
+
+.dialog-border{
+  background-image: linear-gradient( gray, rgb(55, 55, 55));
+  border-width: 4px;
+  border-style: solid;
+  border-color: black;
+  border-radius: 4px;
+}
+
+.axis-home-popup{
+  background-image: linear-gradient( gray, rgb(55, 55, 55));
+  border-width: 4px;
+  border-style: solid;
+  border-color: black;
+  border-radius: 4px;
+}
+
+.popover-bg {
+  padding: 5px;
+  text-decoration: none;
+  color: #C0C0C0;
+  transition: all 0.3s ease 0s;
+  margin: 5px;
+  background-image: linear-gradient( gray, rgb(55, 55, 55));
+  border: 4px solid black;
+  border-radius: 4px;
+}
+
+.numpad-bg{
+  background-image: linear-gradient( gray, rgb(55, 55, 55));
+  border-style: solid;
+  border-width: 4px;
+  border-color:  rgb(41, 41, 41);
+  border-radius: 4px;
+}
+
+.numpad-cmd-bg{
+  background-image: linear-gradient( @Theme-color, rgb(55, 55, 55));
+  border-style: solid;
+  border-width: 4px;
+  border-color:  rgb(41, 41, 41);
+  border-radius: 4px;
+}
+
+.numpad-display{
+  background: #C0C0C0;
+  color: black;
+  border-style: solid;
+  border-width: 4px;
+  border-color: gray;
+  border-radius: 4px;
+}
+
+.red-outline{
+  border-style: solid;
+  border-width: 4px;
+  border-color: @Theme-color;
+  border-radius: 10px;
+}
+
+.axis-display-box, .jog-box{
+  border-style: solid;
+  border-width: 4px;
+  border-color: @Theme-color;
+  border-radius: 10px;
+}
+.axis-display{
+  background: black;
+  border-style: solid;
+  border-width: 4px;
+  border-radius: 12px;
+  border-color: #222;
+}
+
+.display-box{
+  background: black;
+  border-style: solid;
+  border-width: 4px;
+  border-radius: 12px;
+  border-color: #222;
+}
+
+.state-disp {
+  padding: 5px;
+  text-decoration: none;
+  color: #C0C0C0;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.ctrl-button {
+  padding: 5px;
+  text-decoration: none;
+  color: #C0C0C0;
+  background-image: linear-gradient(#555555, #303030);
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.compress-button {
+  padding: 0px;
+  text-decoration: none;
+  color: #C0C0C0;
+  background-image: linear-gradient(#555555, #303030);
+  border: 2px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.ctrl2-button {
+  padding: 5px;
+  text-decoration: none;
+  color: #C0C0C0;
+  background-image: linear-gradient(#555555, #303030);
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.ctrl-button-active{
+  background-image: linear-gradient(@Theme-color, black);
+  padding: 5px;
+  text-decoration: none;
+  color: #C0C0C0;
+  background-color: #303030;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.ctrl-button-green{
+  background-image: linear-gradient(darkgreen, black);
+  padding: 5px;
+  text-decoration: none;
+  color: #C0C0C0;
+  background-color: #303030;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.ctrl-button:disabled{
+  color: #303030;
+  background-color: #24252A;
+}
+
+.nav_button {
+  padding: 5px;
+  text-decoration: none;
+  color: #C0C0C0;
+  background-color: #303030;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+  margin: 5px;
+}
+
+.entry {
+  /*background-image: none; 
+  border-image: none;*/
+  padding: 1px;
+  text-decoration: none;
+  color: black; /* text color */
+  background: white;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+}
+
+.entry-disabled{
+  padding: 1px;
+  text-decoration: none;
+  color: gray;
+  background-color: #303030;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.str-entry{
+  padding: 1px;
+  text-decoration: none;
+  color: black;
+  background: white;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.str-entry-disabled{
+  padding: 1px;
+  text-decoration: none;
+  color: gray;
+  background-color: #303030;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.textview text {
+  caret-color: black;
+  text-decoration: none;
+  color: black;
+  background-color: white;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.textview-disabled text {
+  caret-color: black;
+  text-decoration: none;
+  color: gray;
+  background-color: #303030;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.alarmview {
+  padding: 5px;
+  text-decoration: none;
+  color: #C0C0C0;
+  transition: all 0.3s ease 0s;
+  margin: 5px;
+  background-image: linear-gradient( gray, rgb(55, 55, 55));
+  border: 4px solid black;
+  border-radius: 4px;
+}
+
+.settings-config {
+  padding: 5px;
+  text-decoration: none;
+  color: #C0C0C0;
+  transition: all 0.3s ease 0s;
+  margin: 5px;
+  background-image: linear-gradient( gray, rgb(55, 55, 55));
+  border: 4px solid black;
+  border-radius: 4px;
+}
+
+.tog-ctrl-enabled {
+  padding: 5px;
+  text-decoration: none;
+  background-color: #C0C0C0;
+  border: 4px solid #303030;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+  margin: 5px;
+}
+
+.tog-ctrl-disabled {
+  padding: 5px;
+  text-decoration: none;
+  background-color: #303030;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+  margin: 5px;
+}
+
+
+.tog-ctrl-button {
+  padding: 5px;
+  text-decoration: none;
+  color: #C0C0C0;
+  background-color: #303030;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+  margin: 5px;
+}
+
+.check-box{
+  /*background-color: blue;  background of box color*/
+  padding: 5px;
+  text-decoration: none;
+  border: 4px solid #24252A;
+  border-radius: 10px;
+  transition: all 0.3s ease 0s;
+}
+
+.border-num-display {
+  padding: 5px;
+  text-decoration: none;
+  color: #C0C0C0;
+  background-color: rgb(41, 41, 41);
+  border: 4px solid gray;
+  border-radius: 5px;
+  transition: all 0.3s ease 0s;
+}
+
+.borderless-num-display{
+  padding: 5px;
+  text-decoration: none;
+  /* color: #C0C0C0; -- moved to color.css*/
+  transition: all 0.3s ease 0s;
+}
+

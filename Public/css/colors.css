@@ -1,0 +1,44 @@
+.text-color{
+    color: @Theme-color;
+}
+
+.text-white-color{
+  color: #C0C0C0;
+}
+
+.text-gray-color{
+  color: gray;
+}
+
+.text-black-color{
+  color: black;
+}
+
+.eu-label{
+  color: white
+}
+.eu-label-inactive{
+  color:#323232;
+}
+
+.num-border-red{
+    border-color:  @Theme-color;
+}
+
+.num-border-blue{
+    border-color:  blue;
+}
+
+.num-border-pink{
+    border-color:  rgb(255, 0, 242);
+}
+
+.red-panel{
+  background-color: red;
+}
+.green-panel{
+  background-color: green;
+}
+.blue-panel{
+  background-color: blue;
+}
