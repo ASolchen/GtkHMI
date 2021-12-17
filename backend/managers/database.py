@@ -21,6 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 # 
+import os
 import gi, time
 gi.require_version('Gtk', '3.0')
 from gi.repository import GObject
@@ -28,6 +29,59 @@ import sqlite3
 from io import StringIO
 from sqlite3 import Error
 import re
+
+
+
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session
+from sqlalchemy.orm import declarative_base
+from sqlalchemy import ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy.sql.sqltypes import Float, Numeric
+
+
+AppSettingsBase = declarative_base()
+class WidgetsDatabase(AppSettingsBase):
+    __tablename__ = 'widgets'
+    id = Column(Integer, primary_key=True)
+    parent_id = Column(Integer, ForeignKey('widgets.id')) # integer of parent, if NULL then top level (Display)
+    widget_class = Column(String) # widget type
+    build_order = Column(Integer)
+    x = Column(Integer)
+    y = Column(Integer)
+    width = Column(Integer)
+    height = Column(Integer)
+    description = Column(String)
+    global_reference = Column(Boolean) # if True, is a global parent and all of its children are part of a global assembly
+
+
+
+class WidgetDb():
+  def __init__(self) -> None:
+    self.widgets_model = WidgetsDatabase
+
+  def __enter__(self):
+    engine = create_engine(f"sqlite:///{os.path.join(os.path.dirname(__file__), 'test_project.db')}") #should create a .db file next to this one
+    AppSettingsBase.metadata.create_all(engine) #creates all the tables above
+    Session = sessionmaker(bind=engine)
+    self.session = Session()
+    return self
+  
+  def __exit__(self, *args):
+    print(args)
+    self.session.close()
+
+
+with WidgetDb() as db:
+  idx = None
+  for x in range(10):
+    row = db.widgets_model(parent_id=idx, widget_class='Base', x=10, y=10, width=10, height=10, description="Some description")
+    db.session.add(row)
+    db.session.commit()
+    idx = row.id
+
 
 
 class DatabaseManager(GObject.Object):
