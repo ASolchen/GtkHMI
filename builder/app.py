@@ -107,7 +107,7 @@ class App(GObject.Object):
     self.navigator_panel.add(self.nav_button_bar)
 
     left_bottom_frame = Gtk.Frame(width_request=400)
-    left_bottom_frame.set_label("Settings")
+    left_bottom_frame.set_label("Widget Settings")
     self.settings_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
     scroll = Gtk.ScrolledWindow()
     scroll.add(self.settings_panel)
@@ -452,8 +452,11 @@ class App(GObject.Object):
       self.settings_panel.remove(c)
     rows = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ID", w_id)
     if len(rows):
+      nb = Gtk.Notebook()
+      self.settings_panel.add(nb)
       row = rows[0]
-      self.settings_panel.add(BuilderToolsWidget(self, row))
+      nb.append_page(BuilderToolsWidget(self, row), Gtk.Label(label="Basic"))
+      nb.append_page(Gtk.Box(), Gtk.Label(label="Advanced"))
       self.settings_panel.show_all()
   
   def open_widget_popup(self, button):
