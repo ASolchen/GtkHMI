@@ -28,32 +28,30 @@ import re
 import time
 
 from backend.widget_classes.widget import Widget
+from backend.managers.database_models.widget_database import WidgetParamsDisplay
 
 class DisplayWidget(Widget):
 
-  def __init__(self, factory, parent, params, replacements):
-    # replacements are a list of dicts like -> [{'Name': 'AXIS', 'Value': 'X'},]
-    # will replace #AXIS# with "X"
-    if 'Replacements' in params:
-      replacements += params['Replacements']
-    params['Replacements'] = replacements
-    super(DisplayWidget, self).__init__(factory, parent, params)
-  
-  def build(self):
-    rows = self.db_manager.get_rows("WidgetParams-display",
-        ["Overlay", "Pollrate", "StartupScript", "ShutdownScript"], "WidgetID", self.id)
-    try:
-      self.substitute_replacements(self.replacements, rows[0])
-      self.overlay = rows[0]["Overlay"] #if overlay, this is a popup display
-      self.pollrate = rows[0]["Pollrate"]
-      self.startup_script = rows[0]["StartupScript"]
-      self.shutdown_script = rows[0]["ShutdownScript"]
-    except (IndexError, KeyError):
-      event_msg = "DisplayWidget {} path lookup error".format(self.id)
-      self.app.display_event(event_msg)
+  orm_model = WidgetParamsDisplay
+  @classmethod
+  def get_params_from_orm(cls, result):
+    params = {
+      "pollrate": result.pollrate,
+      "overlay": result.overlay,
+      "on_startup": result.on_startup,
+      "on_shutdown": result.on_shutdown,
+    }
+    return params
 
-
-    self.widget = Gtk.Fixed(width_request=self.width, height_request=self.height)
+  def __init__(self, factory, params):
+    self.widget = Gtk.Fixed()
+    super(DisplayWidget, self).__init__(factory, params)
+    self.overlay = params.get("overlay") #if overlay, this is a popup display
+    self.pollrate = params.get("pollrate")
+    self.startup_script = params.get("on_startup")
+    self.shutdown_script = params.get("on_shutdown")
+    self.widget.set_property("width_request", self.width)
+    self.widget.set_property("height_request", self.height)
     self.polling = True
     self.startup()
 
@@ -82,24 +80,15 @@ class DisplayWidget(Widget):
 
 
 class PopupDisplayWidget(DisplayWidget):
-  def __init__(self, factory, params, replacements):
+  def __init__(self, factory, params):
     self.window = PopupWindow(factory.app.root)
     self.window.set_default_size(params["Width"], params["Height"])
     self.window.set_border_width(1)
     self.window.set_keep_above(True)
     self.window.set_decorated(False)
     self.widget = self.window.layout
-    parent = self.widget
-    if not params["Styles"]:
-      self.styles = []
-    elif not "," in params["Styles"]:
-      self.styles = [params["Styles"],]
-    else:
-      self.styles = params["Styles"].split(",")
-    if 'Replacements' in params:
-      replacements += params['Replacements']
-    params['Replacements'] = replacements
-    super(PopupDisplayWidget, self).__init__(factory, parent, params, replacements=[])
+    params["parent"] = self.widget
+    super(PopupDisplayWidget, self).__init__(factory, params)
     self.window.show_all()
 
 

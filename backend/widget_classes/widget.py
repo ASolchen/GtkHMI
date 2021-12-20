@@ -28,127 +28,85 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GObject, Gdk, GdkPixbuf
 import re
 import time
-
-"""
-TODO
-            compare all widget types for commonalities
-            connection Modbus connection parameters to proper table
-            use datatypes for Tags table and connections
-            finish events writing to widget to fix busting out of thread (add signal to get it to write memory db)
-DONE>>>>>>  add control for autoconnect option in communication driver
-DONE>>>>>>  add popup from home icon button for zeroing or setting value (maybe just use calculator popup)
-DONE>>>>>>  create event widget and way to pass internal alarms to it
-DONE>>>>>>  add way to clear events out of table wiht buttons
-DONE>>>>>>  update and store serial port settings to mill.db
-DONE>>>>>>  pass in stored serial port to drop down and then update when a new one is selected use the one in the box to connect so need to pass it in
-DONE>>>>>>  display saved serial port not just first item listed
-DONE>>>>>>  add machine home button to AUX control box
-DONE>>>>>>  add small num display for machine position display
-            connect all of the widget tags to PLC / GRBL
-            add hardcoded Modbus connection to PLC
-            add code in PLC that when homing it disables end of travel drive disable
-            add functionality to builder to be able to add rows to db
-            have builder create /build the page requested to be able to move items around on screen
-            add connections configuration screens to builder
-            add communication tags / internal tags database with adding/removing items
-DONE>>>>>>  verify window size 1280 x 720
-DONE>>>>>>  create settings widget
-DONE>>>>>>  widget state indications 
-DONE>>>>>> 	state always an int
-DONE>>>>>>  need z axis for putting buttons on top of each other
-DONE>>>>>> 	when pulling from database return in order of z index to build one on top of other
-DONE>>>>>>  remove bool indicator widget
-DONE>>>>>>  remove toggle widget
-DONE>>>>>>  remove indicator tag column from button
-DONE>>>>>> 	Can do it with a box on top of a button
-DONE>>>>>>  Remove all blink functions
-DONE>>>>>>  remove gcode widget
-DONE>>>>>>  create keyboard
-DONE>>>>>>  create num pad popup
-DONE>>>>>>  create string display
-DONE>>>>>>  create string entry that pops up keyboard
-DONE>>>>>>  update numeric display / numeric entry to account for number formatting
-DONE>>>>>>  create save function for gcode textview
-DONE>>>>>>  save textview when switching screens
-DONE>>>>>>  move textview to separate popup
-DONE>>>>>>  move all fonts to specific css pages
-DONE>>>>>>  finish keyboard for typing on actual keyboard
-DONE>>>>>>  move all colors to specific css pages
-DONE>>>>>>  create triangle for invalid values / read on widget class
-DONE>>>>>>  clean-up building children
-DONE>>>>>>  add way to save com port selection to mill.db
-DONE>>>>>>  create displays for alarm and events
-DONE>>>>>>  create settings rows (treeview) for changing and updating settings (checkbox/entry) Have 5 buttons(open/save/send all/send one/refresh)
-DONE>>>>>>  Discuss state indicator / label / string display widgets.  Which ones we need
-DONE>>>>>>  add default controls to alarm_event widget
-DONE>>>>>>  Finish connection tab so that it reads the available USB ports as well as shows a connection indicaiton
-"""
+from backend.managers.database_models.widget_database import WidgetParams
 
 class Widget(GObject.Object):
-  base_parmas = ["ID","Description", "ParentID","X", "Y", "Width", "Height", "Class", "Styles", "GlobalReference", "BuildOrder"]
-  class_params = {}
-  
-  def __init__(self, factory, parent, params):
+  orm_model = WidgetParams
+  @classmethod
+  def get_params_from_orm(cls, result):
+    """
+    pass in an orm result (database query result) and this will update the params dictionary
+    with the table columns
+    
+    """
+    params = {
+    "id": result.id,
+    "x": result.x,
+    "y": result.y,
+    "width": result.width,
+    "height": result.height,
+    "widget_class": result.widget_class,
+    "parent_id": result.parent_id,
+    "global_reference": result.global_reference,
+    "build_order": result.build_order
+    }
+    return params
+
+  def __init__(self, factory, params):
     self.factory = factory
     self.app = factory.app
     self.connection_manager = factory.app.connection_manager
-    self.db_manager = factory.db_manager
+    self.db_session = factory.project_db.session
     self.builder_mode = factory.builder_mode
-    self.animations = [] if not "Animations" in params else params["Animations"]
-    self.states = [] if not "States" in params else params["States"]
-    self.replacements = []
-    if "Replacements" in params:
-      self.replacements = params["Replacements"]
-      if len(self.replacements):
-        self.substitute_replacements(self.replacements, params)
-        for animation in self.animations:
-          self.substitute_replacements(self.replacements, animation)
-    self.params = params
-    self.display = params["Display"]
+    replacements = params.get('replacements')
+    if replacements:
+      self.substitute_replacements(replacements, params)
+    self.animations = [] if not params.get("animations") else params.get("animations")
+    self.states = [] if not not params.get("states") else params.get("states")
+    self.display = params.get("display")
     self.tag_ids = {}
     self.signals = []
-    self.x = self.params["X"]
-    self.y = self.params["Y"]
-    self.id = self.params["ID"]
+    self.x = params.get("x")
+    self.y = params.get("y")
+    self.id = params.get("id")
     #add communication error widget from widget class to
     p_buf = GdkPixbuf.Pixbuf.new_from_file_at_scale('./Public/images/Warning.png', 40, -1, True) #creating communciation error indicator
     self.error_ind = Gtk.Image(pixbuf=p_buf)
     #self.error_ind = None
     self.expression_err = False
-    self.global_reference = self.params["GlobalReference"]
-    if not params["Styles"]:
-      self.styles = []
-    elif not "," in params["Styles"]:
-      self.styles = [params["Styles"],]
-    else:
-      self.styles = params["Styles"].split(",")
-    self.widget_class = None
-    self.parent = parent
-    self.width = self.params["Width"]
-    self.height = self.params["Height"]
-    self.widget_class = self.params["Class"]
-    self.widget = None #this is the Gtk.Widget children are built on, overwrite in build meth of custom widget if needed
+
+
+    self.global_reference = params.get("global_reference")
+    self.styles = [] if not params.get("styles") else params.get("styles")
+    self.widget_class = params.get("widget_class")
+    self.parent = params.get("parent")
+    self.global_reference=(params.get("global_reference") and params["global_reference"])\
+                       or (self.parent and hasattr(self.parent, "global_reference") and self.parent.global_reference)
+    
+    self.width = params.get("width")
+    self.height = params.get("height")
     self.widget_ids={} #used to ref IDs to Python classes of children
     self.signals.append(self.connection_manager.connect("tag_update", self.update)) #listen for tag updates
     self.polling = True
-    self.build()
     self.attach_to_parent()
     self.build_children()
     self.count = 0
   
   def __repr__(self):
-    return f'GTK HMI {self.__class__.__name__}(factory, parent, params)'
+    return f'GTK HMI {self.__class__.__name__}'
 
   def __str__(self):
-    return f'GTK HMI {self.__class__.__name__}: {self.params.get("ID")}'
+    return f'GTK HMI {self.__class__.__name__}: {self.id}'
 
-  def substitute_replacements(self, replacements, values):
+  def substitute_replacements(self, replacements, params):
     #pass in a dict to replace all strings in replacements
-    #replacements is a list of dicts {"Name": "", "Value":""}
-    for key, val in values.items():
+    #replacements is a list of dicts [{"name": "MOTOR_TAG", "value":"Motor01"},]
+    #only try on string types
+    for key, val in params.items():
       for replacement in replacements:
         if type(val) == type (u"") or type(val) == type (""):
-          values[key] = values[key].replace("#{}#".format(replacement["Name"]), "{}".format(replacement["Value"]))
+          params[key] = params[key].replace("#{}#".format(replacement["name"]), "{}".format(replacement["value"]))
+      self.replacements = params["replacements"]
 
   
   def run_cmd(self, cmd):
@@ -180,10 +138,10 @@ class Widget(GObject.Object):
       #TODO show error for other animations?
       return
     if anim_type=="X":
-      self.x = val + self.params["X"]
+      self.x = val + params["X"]
       self.parent.move(self.widget, self.x, self.y)
     if anim_type=="Y":
-      self.y = val + self.params["Y"]
+      self.y = val + params["Y"]
       self.parent.move(self.widget, self.x, self.y)
     if anim_type=="VIS":
       self.widget.set_property("visible", bool(val))
@@ -224,7 +182,7 @@ class Widget(GObject.Object):
     self.parent.put(self.error_ind,self.x,self.y)
 
   def attach_to_parent(self):
-    if not self.widget: # hasn't been set by custom widget class
+    if not hasattr(self, "widget"): # hasn't been set by custom widget class
       self.widget = Gtk.Fixed()
     if not self.widget_class: # base class, add style box
       style_box = Gtk.Box(width_request=self.width, height_request=self.height)
@@ -237,6 +195,7 @@ class Widget(GObject.Object):
     self.error_ind.set_property('visible',False)
 
   def build_children(self): #from the database
+    params = {}
     if self.global_reference:
       #get the child params of the globals children.
       child_params = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ParentID", self.global_reference, order_by="BuildOrder")
@@ -247,33 +206,29 @@ class Widget(GObject.Object):
         c_params["GlobalReference"] = c_params["ID"]
         #c_params["ID"] = "{}.{}".format(self.id, c_params["ID"])
     else:
-      child_params = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ParentID", self.id, order_by="BuildOrder")
-      for c_params in child_params:
-        c_params["Animations"] = self.db_manager.get_rows("WidgetAnimations", ["Type","Expression"], "WidgetID", c_params["ID"])
-        c_params["States"] = self.db_manager.get_rows("WidgetStateIndications", ["State","Caption","Style"], "WidgetID", c_params["ID"])
-        c_params["Replacements"] = self.replacements #pass down existing replacements
-        if c_params["GlobalReference"]: #this is a global, lookup and add replacements to existing ones
-          global_replacements = self.db_manager.get_rows("GlobalObjectParameterValues",
-          ["Name", "Value"], "WidgetID", c_params["ID"])
-          c_params["Replacements"] = global_replacements + self.replacements[:]
-          pass
-    for params in child_params:
-      #lookup params for base widget
-      if params["GlobalReference"]: # this is a global,
-        #lookup the global's params and swap out wildcards
-        temp = {"ID": params["ID"], "ParentID": params["ParentID"], "Replacements": params["Replacements"],
-                "X": params["X"], "Y":params["Y"], "GlobalReference": params["GlobalReference"],
-                "Animations": params["Animations"],
-                "States": params["States"],}#hold this widgets id and location
-        params = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ID", params["GlobalReference"])[0]
-        params.update(temp)
-      if params["Class"]: # custom widget
-        w_class = self.factory.widget_types[params["Class"]]
-      else: #base widget
-        w_class = Widget
-      params["Display"] = self.display #all widgets hold a ref to what display they are on
-            
-      self.widget_ids[params["ID"]] = w_class(self.factory, self.widget, params)
+      w_type = Widget
+      child_ids = self.db_session.query(w_type.orm_model)\
+      .filter(w_type.orm_model.parent_id == self.id)\
+      .all()
+      for res in child_ids:
+        base_res = self.db_session.query(w_type.orm_model)\
+          .filter(w_type.orm_model.id == res.id)\
+          .first()
+        params = w_type.get_params_from_orm(base_res)
+        if params.get("widget_class") and params["widget_class"] in self.factory.widget_types:
+          #look up advanced params
+          w_type = self.factory.widget_types[params["widget_class"]]
+          class_res = self.db_session.query(w_type.orm_model)\
+          .filter(w_type.orm_model.id == res.id)\
+          .first()
+          if not class_res:
+            w_type = None
+            raise Exception(f"Misconfigured database, widget id:{res.id} missing config for class params")
+          else:
+            params.update(w_type.get_params_from_orm(class_res))
+        if w_type:
+          params["parent"] = self.widget
+          self.widget_ids[params["id"]] = self.factory.create_widget(w_type, params)
 
   def get_widget_by_id(self, id_string):
     if id_string == self.id:
@@ -342,20 +297,8 @@ class Widget(GObject.Object):
     
   def intersect(self, x, y, w, h):
     #checks if any point of a rectangle of self insects with any point of a new rectagle (widget)
-    result = False
-    def point_inside(x,y,left,bottom,right,top):
-      return (left<=x<=right) and (top<=y<=bottom)
-    #check if self corners are in other rect 
-    result |= point_inside(self.x, self.y, x,y+h,x+w,y) #self top left
-    result |= point_inside(self.x, self.y+self.height, x,y+h,x+w,y) #self bottom left
-    result |= point_inside(self.x+self.width, self.y+self.height, x,y+h,x+w,y) #self bottom right
-    result |= point_inside(self.x+self.width, self.y, x,y+h,x+w,y) #self top right
-    #check if new rect corners are in self rect
-    result |= point_inside(x, y, self.x,self.y+self.height,self.x+self.width,self.y) #rect top left
-    result |= point_inside(x, y+h,  self.x,self.y+self.height,self.x+self.width,self.y) #rect bottom left
-    result |= point_inside(x+w, y+h, self.x,self.y+self.height,self.x+self.width,self.y) #rect bottom right
-    result |= point_inside(x+w, y, self.x,self.y+self.height,self.x+self.width,self.y) #rect top right
-    return result
+    rect = Gdk.Rectangle(height=h, width=w, x=x, y=y)
+    return rect.intersect(self.get_allocated())
 
 
 

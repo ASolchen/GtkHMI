@@ -43,6 +43,7 @@ from backend.widget_classes.Event_viewer import EventViewWidget
 from backend.widget_classes.settings import SettingsWidget
 from backend.widget_classes.list_select import ListSelectionWidget
 from backend.widget_classes.checkbox import CheckBoxWidget
+from backend.managers.database_models.widget_database import WidgetAnimations, WidgetStateIndications, GlobalObjectParameterValues
 
 class UnknownWidgetError(KeyError):
   pass
@@ -51,56 +52,103 @@ class GladeIdMissing(KeyError):
   pass
 
 WIDGET_TYPES = {
-      "ctrl-button": ButtonWidget,
-      "num-entry":NumericEntryWidget,      
-      "str-entry":StringEntryWidget,
-      "label": LabelWidget,
-      "image": ImageWidget,
-      "textview":TextViewWidget,
-      "num-display":NumericDisplayWidget,
-      "str-display":StringDisplayWidget,
-      "state-display":StateIndicationWidget,
-      "state-control":StateControlWidget,
-      "list-select":ListSelectionWidget,
-      "check-box":CheckBoxWidget,
-      "alarm-view": AlarmViewWidget,
-      "event-log-view":EventViewWidget,
-      "settings-config": SettingsWidget
-    }
+  "ctrl-button": ButtonWidget,
+  "num-entry":NumericEntryWidget,      
+  "string-entry":StringEntryWidget,
+  "label": LabelWidget,
+  "image": ImageWidget,
+  "text-view":TextViewWidget,
+  "num-display":NumericDisplayWidget,
+  "string-display":StringDisplayWidget,
+  "state-display":StateIndicationWidget,
+  "ctrl-state":StateControlWidget,
+  "list-select":ListSelectionWidget,
+  "check-box":CheckBoxWidget,
+  "alarm-view": AlarmViewWidget,
+  "event-log-view":EventViewWidget,
+  "settings-config": SettingsWidget,
+  "display": DisplayWidget
+  }
     
 class WidgetFactory(GObject.Object):
   
   def __init__(self, app):
     super(WidgetFactory, self).__init__()
     self.app = app
-    self.db_manager = app.db_manager
-    self.builder_mode = False
+    self.project_db = app.db_manager.project_db
+    self.widget_config = self.project_db.widget_config
+    self.builder_mode = True
     self.widget_types = WIDGET_TYPES
     self.displays = {} #used to ref id to Python class of the open displays   
 
   def open_display(self, widget_id, replacements=[]):
-    params = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ID", widget_id)[0]
-    if not params["Class"] == u"display":
-      return
-    params.update(self.db_manager.get_rows("WidgetParams-display", ["Overlay"], "WidgetID", widget_id)[0])
-    if params["Overlay"]: 
-      params["Display"] = params["ID"] #this widget is the parent display
-      self.displays[params["ID"]] = PopupDisplayWidget(self, params, replacements)
-      self.displays[params["ID"]].window.show_all()     
+    session = self.project_db.session
+    base_result, display_result = session.query(Widget.orm_model, DisplayWidget.orm_model)\
+      .filter(Widget.orm_model.id == DisplayWidget.orm_model.id)\
+      .filter(DisplayWidget.orm_model.id == widget_id)\
+      .first()
+    if not display_result:
+      raise Exception("Display id {widget_id} not in project database")
+    params = Widget.get_params_from_orm(base_result)
+    params.update(DisplayWidget.get_params_from_orm(display_result))
+    if params["overlay"]: 
+      self.displays[params["id"]] = self.create_widget(PopupDisplayWidget, params)
+      self.displays[params["id"]].window.show_all()     
     else: #if not a popup only, check for intersect and delete if nessasary
       hitlist = []
       for display in self.displays:
-        if self.displays[display].intersect(params["X"], params["Y"], params["Width"], params["Height"]):
+        if self.displays[display].intersect(base_result):
           hitlist.append(display)
       for display in hitlist:
         self.displays[display].kill_children()
         self.displays[display].widget.destroy()
         self.displays[display].shutdown()
         del(self.displays[display])
-      params["Display"] = params["ID"] #this widget is the parent display
-      self.displays[params["ID"]] = DisplayWidget(self, self.app.layout, params, replacements)
-      self.displays[params["ID"]].widget.show_all()
+      params["parent"] = self.app.layout
+      id = params["id"]
+      self.displays[id] = self.create_widget(DisplayWidget, params)
+      self.displays[id].widget.show_all()
   
+  def create_widget(self, widget_class, params):
+    #lookup animations, states, replacements
+    id = params.get("id")
+    if not id:
+      raise Exception("Cannot create widget without id")
+    if params.get("parent"):
+      if not params.get("replacements"):
+        params["replacements"] = []
+      if hasattr(params["parent"], "replacements"):
+        params["replacements"] += params["parent"].replacements[:]
+    session = self.project_db.session
+    globals_result = session.query(GlobalObjectParameterValues).filter(GlobalObjectParameterValues.widget_id==id).all()
+    if len(globals_result):
+      if not params.get("replacements"):
+        params["replacements"] = []
+      for res in globals_result:
+        params["replacements"].append({"name": res.name, "value": res.value})
+    animation_result = session.query(WidgetAnimations).filter(WidgetAnimations.widget_id==id).all()
+    if len(animation_result):
+      if not params.get("animations"):
+        params["animations"] = []
+      for res in animation_result:
+        if params.get("replacements"):
+          for replacement in params["replacements"]:
+            res.expression = res.expression.replace(f'#{replacement["name"]}#', replacement["value"])
+        params["animations"].append({"type": res.type, "expression": res.expression})
+    states_result = session.query(WidgetStateIndications).filter(WidgetStateIndications.widget_id==id).all()
+    if len(states_result):
+      if not params.get("states"):
+        params["states"] = []
+      for res in states_result:
+        if params.get("replacements"):
+          for replacement in params["replacements"]:
+            res.style = res.style.replace(f'#{replacement["name"]}#', replacement["value"])
+            res.caption = res.caption.replace(f'#{replacement["name"]}#', replacement["value"])
+        params["states"].append({"state": res.state, "style": res.style, "caption": res.caption})
+   
+    return widget_class(self, params)
+
+
   def close_display(self, widget_id):
     params = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ID", widget_id)[0]
     self.displays[params["ID"]].kill_it()

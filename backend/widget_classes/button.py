@@ -28,24 +28,32 @@ import re
 import time
 
 from backend.widget_classes.widget import Widget
+from backend.managers.database_models.widget_database import WidgetParamsControlButton
 
 class ButtonWidget(Widget):
-  def build(self):
-    rows = self.db_manager.get_rows("WidgetParams-ctrl-button",
-    ["Label","Image","OnPress","OnRelease","Confirm_onpress_msg","Confirm_onrelease_msg"], "WidgetID", self.id)
-    try:
-      self.substitute_replacements(self.replacements, rows[0])
-      self.label_text = rows[0]["Label"]
-      self.image = rows[0]["Image"]
-      self.on_press_cmd = rows[0]["OnPress"]
-      self.on_release_cmd = rows[0]["OnRelease"]
-      self.confirm_press_action_msg = rows[0]["Confirm_onpress_msg"]
-      self.confirm_release_action_msg = rows[0]["Confirm_onrelease_msg"]
-    except (IndexError, KeyError):
-      event_msg = "ButtonWidget {} path lookup error".format(self.id)
-      self.app.display_event(event_msg)
+  orm_model = WidgetParamsControlButton
+  @classmethod
+  def get_params_from_orm(cls, result):
+    params = {
+      "label": result.label,
+      "image": result.image,
+      "on_press": result.on_press,
+      "on_release": result.on_release,
+      "confirm_on_press_msg": result.confirm_on_press_msg,
+      "confirm_on_release_msg": result.confirm_on_release_msg,
+    }
+    return params
+
+  def __init__(self, factory, params):
+    self.widget = Gtk.Button()
+    super(ButtonWidget, self).__init__(factory, params)
+    self.label_text = params.get("label")
+    self.image = params.get("image")
+    self.on_press_cmd = params.get("on_press")
+    self.on_release_cmd = params.get("on_release")
+    self.confirm_press_action_msg = params.get("confirm_on_press_msg")
+    self.confirm_release_action_msg = params.get("confirm_on_release_msg")
     self.btn_active = None
-    self.widget = Gtk.Button(width_request=self.width, height_request=self.height)
     if self.label_text:
       self.widget.set_label(self.label_text)
     if self.image: #image on top of button
@@ -54,12 +62,14 @@ class ButtonWidget(Widget):
       #image = Gtk.Image(width_request=self.width-20, height_request=self.height-20)
       #image.set_from_file(self.image)
       self.widget.add(image)
-    self.set_styles(self.widget)
     if not self.builder_mode:
       if self.on_press_cmd and not self.builder_mode:
         self.widget.connect("pressed",self.btn_press_action)
       if self.on_release_cmd  and not self.builder_mode:
         self.widget.connect("released",self.btn_release_action)
+    self.set_styles(self.widget)
+    self.widget.set_property("width_request", self.width)
+    self.widget.set_property("height_request", self.height)
 
   def animate_state(self, val):
     #override this in child classes if needed

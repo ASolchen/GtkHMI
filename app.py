@@ -109,16 +109,17 @@ class App(GObject.Object):
     self.builder.get_object("refresh_switch").connect("notify::state",self.toggle_auto_refresh)
 
   def start_app(self, *args):
-    self.db_manager.init_sqlite_db(self.app_settings['project-file'])
-    self.emit("db_ready", self.db_manager)
-    rows = self.db_manager.get_rows("ApplicationSettings", ["StyleSheet", "Width", "Height", "DarkTheme", "StartupDisplay"])
-    if not len(rows):
+    self.db_manager.open('./Public/test_project.db')
+    session = self.db_manager.project_db.session
+    app_config_table = self.db_manager.project_db.app_config.models["application-settings"]
+    settings = session.query(app_config_table).order_by(app_config_table.id).first()
+    if not settings:
       raise KeyError("Application settings not in project database")
-    self.app_settings['style-sheet'] = rows[0]['StyleSheet']
-    self.app_settings['width'] = rows[0]['Width']
-    self.app_settings['height'] = rows[0]['Height']
-    self.app_settings['dark-theme'] = rows[0]['DarkTheme']
-    self.app_settings['startup-display'] = rows[0]['StartupDisplay']
+    self.app_settings['style-sheet'] = settings.style_sheet
+    self.app_settings['width'] = settings.width
+    self.app_settings['height'] = settings.height
+    self.app_settings['dark-theme'] = settings.dark_theme
+    self.app_settings['startup-display'] = settings.startup_display
     self.layout.set_property('width_request', self.app_settings["width"])
     self.layout.set_property('height_request', self.app_settings["height"])
     settings = Gtk.Settings.get_default()

@@ -14,7 +14,6 @@ class ProjectDatabase():
     self.widget_config = WidgetDb
     self.connection_config = ConnectionDb
     self.app_config = AppDb
-    self.subcription_db = SubscriptionDb() #in-memory database
     self.engine = None
     self.session = None
   
@@ -22,6 +21,7 @@ class ProjectDatabase():
     if self.session:
       self.close()
     self.engine = create_engine(f"sqlite:///{path}") #should create a .db file next to this one
+    AppDb.open(self.engine) #creates all the tables in app config tables
     WidgetDb.open(self.engine) #creates all the tables in widgets
     ConnectionDb.open(self.engine) #creates all the tables in widgets
     Session = sessionmaker(bind=self.engine)

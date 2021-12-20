@@ -52,6 +52,7 @@ class ApplicationSettings(AppConfigBase):
 class AppDb():
   models = {
     "alarm_event_config": AlarmEventConfig,
+    "event-log": EventLog,
     "alarm_events":AlarmEvents,
     "application-settings": ApplicationSettings,
   }
