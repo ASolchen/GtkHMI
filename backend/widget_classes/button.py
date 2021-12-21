@@ -44,32 +44,69 @@ class ButtonWidget(Widget):
     }
     return params
 
+  @GObject.Property(type=str, flags=GObject.ParamFlags.READWRITE)
+  def label(self):
+    return self._label 
+  @label.setter
+  def label(self, value):
+    self._label = value
+    self.widget.set_property('label', value)
+
+  @GObject.Property(type=str, flags=GObject.ParamFlags.READWRITE)
+  def image(self):
+    return self._image 
+  @image.setter
+  def image(self, value):
+    self._image = value
+    for c in self.widget.get_children():
+      self.widget.remove(c)
+    if value:
+      img = GdkPixbuf.Pixbuf.new_from_file_at_size(self.image, self.width-20, self.height-20)
+      image = Gtk.Image.new_from_pixbuf(img)
+      self.widget.add(image)
+      self.widget.show_all()
+
+  @GObject.Property(type=str, flags=GObject.ParamFlags.READWRITE)
+  def on_press(self):
+    return self._on_press 
+  @on_press.setter
+  def on_press(self, value):
+    self._on_press = value
+
+  @GObject.Property(type=str, flags=GObject.ParamFlags.READWRITE)
+  def on_release(self):
+    return self._on_release 
+  @on_release.setter
+  def on_release(self, value):
+    self._on_release = value
+
+  @GObject.Property(type=str, flags=GObject.ParamFlags.READWRITE)
+  def confirm_on_press_msg(self):
+    return self._confirm_on_press_msg 
+  @confirm_on_press_msg.setter
+  def confirm_on_press_msg(self, value):
+    self._confirm_on_press_msg = value
+
+  @GObject.Property(type=str, flags=GObject.ParamFlags.READWRITE)
+  def confirm_on_release_msg(self):
+    return self._confirm_on_release_msg 
+  @confirm_on_release_msg.setter
+  def confirm_on_release_msg(self, value):
+    self._confirm_on_release_msg = value
+
   def __init__(self, factory, params):
     self.widget = Gtk.Button()
     super(ButtonWidget, self).__init__(factory, params)
-    self.label_text = params.get("label")
-    self.image = params.get("image")
-    self.on_press_cmd = params.get("on_press")
-    self.on_release_cmd = params.get("on_release")
-    self.confirm_press_action_msg = params.get("confirm_on_press_msg")
-    self.confirm_release_action_msg = params.get("confirm_on_release_msg")
-    self.btn_active = None
-    if self.label_text:
-      self.widget.set_label(self.label_text)
-    if self.image: #image on top of button
-      img = GdkPixbuf.Pixbuf.new_from_file_at_size(self.image, self.width-20, self.height-20)
-      image = Gtk.Image.new_from_pixbuf(img)
-      #image = Gtk.Image(width_request=self.width-20, height_request=self.height-20)
-      #image.set_from_file(self.image)
-      self.widget.add(image)
-    if not self.builder_mode:
-      if self.on_press_cmd and not self.builder_mode:
-        self.widget.connect("pressed",self.btn_press_action)
-      if self.on_release_cmd  and not self.builder_mode:
-        self.widget.connect("released",self.btn_release_action)
+    self.resize()
+    self.on_press= params['on_press']
+    self.on_release = params['on_release']
+    self.confirm_on_press_msg = params['confirm_on_press_msg']
+    self.confirm_on_release_msg = params['confirm_on_release_msg']
+    self.label = '' if not params.get("label") else params['label']
+    self.btn_active = None      
+    self.widget.connect("pressed",self.btn_press_action)
+    self.widget.connect("released",self.btn_release_action)
     self.set_styles(self.widget)
-    self.widget.set_property("width_request", self.width)
-    self.widget.set_property("height_request", self.height)
 
   def animate_state(self, val):
     #override this in child classes if needed
@@ -79,27 +116,27 @@ class ButtonWidget(Widget):
       if val == state["State"]:
         sc.add_class(state["Style"])
         if state["Caption"]:
-          self.widget.set_label(state["Caption"])
+          self.label = state["Caption"]
       else:
         sc.remove_class(state["Style"])
 
   def btn_press_action(self,*args):
-    if self.confirm_press_action_msg:
+    if self.confirm_on_press_msg:
       #Confirmation Type Button
-      self.app.confirm(self.on_press_callback, self.confirm_press_action_msg)
+      self.app.confirm(self.on_press_callback, self.confirm_on_press_msg)
     else:
       self.on_press_callback()
     
   def on_press_callback(self):
-    exec(self.on_press_cmd)
+    exec(self.on_press)
 
     
   def btn_release_action(self,*args):
-    if self.confirm_release_action_msg:
+    if self.confirm_on_release_msg:
       #Confirmation Type Button
-      self.app.confirm(self.on_release_callback,self.confirm_release_action_msg)
+      self.app.confirm(self.on_release_callback,self.confirm_on_release_msg)
     else:
       self.on_release_callback()
 
   def on_release_callback(self):
-    exec(self.on_release_cmd)
+    exec(self.on_release)

@@ -49,7 +49,7 @@ class App(GObject.Object):
     self.db_manager = DatabaseManager(self)
     self.connection_manager = ConnectionManager(self)
     self.widget_factory = WidgetFactory(self)
-    self.alarm_manager = AlarmEventViewHandler(self)
+    #self.alarm_manager = AlarmEventViewHandler(self)
     self.build()
       
 

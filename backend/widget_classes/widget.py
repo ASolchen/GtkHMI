@@ -22,12 +22,13 @@
 # SOFTWARE.
 # 
 
-import json , numbers, ast
+import json, numbers, ast
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GObject, Gdk, GdkPixbuf
 import re
 import time
+from backend.exceptions import GtkHmiError, WidgetParamsError
 from backend.managers.database_models.widget_database import WidgetParams
 
 class Widget(GObject.Object):
@@ -52,39 +53,88 @@ class Widget(GObject.Object):
     }
     return params
 
+  @GObject.Property(type=int, flags=GObject.ParamFlags.READABLE)
+  def id(self):
+    return self._id 
+  @GObject.Property(type=int, flags=GObject.ParamFlags.READWRITE)
+  def x(self):
+    return self._x  
+  @x.setter
+  def x(self, value):
+    self._x = value
+    self.move()
+  @GObject.Property(type=int, flags=GObject.ParamFlags.READWRITE)
+  def y(self):
+    return self._y  
+  @y.setter
+  def y(self, value):
+    self._y = value
+    self.move()
+  @GObject.Property(type=int, flags=GObject.ParamFlags.READWRITE)
+  def width(self):
+    return self._width  
+  @width.setter
+  def width(self, value):
+    self._width = value
+    self.resize()
+  @GObject.Property(type=int, flags=GObject.ParamFlags.READWRITE)
+  def height(self):
+    return self._height  
+  @height.setter
+  def height(self, value):
+    self._height = value
+    self.resize()
+  @GObject.Property(type=int, flags=GObject.ParamFlags.READWRITE)
+  def build_order(self):
+    return self._build_order  
+  @build_order.setter
+  def build_order(self, value):
+    self._build_order = value
+    #self.parent.rebuild_children()
+  @GObject.Property(type=str, flags=GObject.ParamFlags.READABLE)
+  def widget_class(self):
+    return self._widget_class 
+  @GObject.Property(type=bool, default=False, flags=GObject.ParamFlags.READABLE)
+  def global_reference(self):
+    return self._global_reference
+
   def __init__(self, factory, params):
+    GObject.Object.__init__(self)
     self.factory = factory
     self.app = factory.app
     self.connection_manager = factory.app.connection_manager
     self.db_session = factory.project_db.session
     self.builder_mode = factory.builder_mode
+    self.tag_ids = {} #TODO < see if this is used
+    self.signals = []
     replacements = params.get('replacements')
     if replacements:
       self.substitute_replacements(replacements, params)
     self.animations = [] if not params.get("animations") else params.get("animations")
     self.states = [] if not not params.get("states") else params.get("states")
-    self.display = params.get("display")
-    self.tag_ids = {}
-    self.signals = []
-    self.x = params.get("x")
-    self.y = params.get("y")
-    self.id = params.get("id")
+    #private settings
+    try:
+      self._id = params['id']
+      self._x= params['x']
+      self._y= params['y']
+      self._width = params['width']
+      self._height = params['height']
+      self._global_reference = params['global_reference']
+      self._build_order = params['build_order']
+    except KeyError as e:
+      raise WidgetParamsError(f"Widget initialization failed to find key:{e} in parameters. Parameters: {params}")
     #add communication error widget from widget class to
     p_buf = GdkPixbuf.Pixbuf.new_from_file_at_scale('./Public/images/Warning.png', 40, -1, True) #creating communciation error indicator
     self.error_ind = Gtk.Image(pixbuf=p_buf)
     #self.error_ind = None
-    self.expression_err = False
-
-
-    self.global_reference = params.get("global_reference")
+    self.expression_err = False    
     self.styles = [] if not params.get("styles") else params.get("styles")
-    self.widget_class = params.get("widget_class")
+    self._widget_class = params.get("widget_class")
     self.parent = params.get("parent")
-    self.global_reference=(params.get("global_reference") and params["global_reference"])\
+    self._global_reference=(params.get("global_reference") and params["global_reference"])\
                        or (self.parent and hasattr(self.parent, "global_reference") and self.parent.global_reference)
     
-    self.width = params.get("width")
-    self.height = params.get("height")
+
     self.widget_ids={} #used to ref IDs to Python classes of children
     self.signals.append(self.connection_manager.connect("tag_update", self.update)) #listen for tag updates
     self.polling = True
@@ -97,6 +147,16 @@ class Widget(GObject.Object):
 
   def __str__(self):
     return f'GTK HMI {self.__class__.__name__}: {self.id}'
+
+
+
+  def move(self):
+    self.parent.move(self.widget, self.x, self.y)
+  
+  def resize(self):
+    self.widget.set_property("width_request", self.width)
+    self.widget.set_property("height_request", self.height)
+
 
   def substitute_replacements(self, replacements, params):
     #pass in a dict to replace all strings in replacements
@@ -138,11 +198,9 @@ class Widget(GObject.Object):
       #TODO show error for other animations?
       return
     if anim_type=="X":
-      self.x = val + params["X"]
-      self.parent.move(self.widget, self.x, self.y)
+      self.x = val
     if anim_type=="Y":
-      self.y = val + params["Y"]
-      self.parent.move(self.widget, self.x, self.y)
+      self.y = val
     if anim_type=="VIS":
       self.widget.set_property("visible", bool(val))
     if anim_type=="ENBL":
@@ -211,6 +269,8 @@ class Widget(GObject.Object):
       .filter(w_type.orm_model.parent_id == self.id)\
       .all()
       for res in child_ids:
+        params = None
+        w_type = Widget
         base_res = self.db_session.query(w_type.orm_model)\
           .filter(w_type.orm_model.id == res.id)\
           .first()

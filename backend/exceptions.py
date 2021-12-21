@@ -27,3 +27,8 @@ class GtkHmiError(Exception):
     """
     Base exception for all exceptions raised by GtkHMI
     """
+
+class WidgetParamsError(GtkHmiError):
+  """
+  raised on param errors
+  """

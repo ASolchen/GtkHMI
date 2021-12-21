@@ -33,7 +33,7 @@ class DatabaseManager(GObject.Object):
   def __init__(self, app):
     super(DatabaseManager, self).__init__()
     self.app = app
-    self.subcription_db = SubscriptionDb() #in-memory database for now, could be remote server ()
+    self.subcription_db = SubscriptionDb() #in-memory database for now, could be remote server
     self.project_db = ProjectDatabase()
   
   def open(self, path):
