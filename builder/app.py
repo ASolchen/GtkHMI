@@ -57,6 +57,7 @@ class App(GObject.Object):
   def __init__(self, root): 
     super(App, self).__init__()
     self.root = root
+    #private props
     #root.connect("delete-event", lambda *args: self.confirm(self.shutdown,"Do you really want to exit?"))  
     root.connect("delete-event", self.app_exit)
     root.connect('destroy', Gtk.main_quit)

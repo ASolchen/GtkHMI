@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) 2021 Jason Engman <jengman@testtech-solutions.com>
-# Copyright (c) 2021 Adam Solchenberger <asolchenberger@testtech-solutions.com>
+# Copyright (c) 2021 Adam Solchenberger <asolchenberger@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -37,10 +37,17 @@ class App(GObject.Object):
   Base class of the app to hold all refs and logic
   main passes in the Gtk Builder object so all named widgets can be referenced
   """
+  @GObject.Property(type=bool, default=True, flags=GObject.ParamFlags.READWRITE)
+  def builder_mode(self):
+    return self._builder_mode  
+  @builder_mode.setter
+  def builder_mode(self, value):
+    self._builder_mode = value
+
   def __init__(self, root):
     super(App, self).__init__()
-    self.builder = Gtk.Builder()
     self.root = root
+    self._builder_mode = True
     self.auto_refresh = False
     root.connect("delete-event", lambda *args: self.confirm(self.shutdown,"Do you really want to exit?"))
     with open("Public/app_settings.json", "r") as fp:
@@ -51,6 +58,11 @@ class App(GObject.Object):
     self.widget_factory = WidgetFactory(self)
     #self.alarm_manager = AlarmEventViewHandler(self)
     self.build()
+    GObject.timeout_add(1000, self.test_builder_mode)
+
+  def test_builder_mode(self, *args):
+    self.builder_mode = not self.builder_mode
+    return True
       
 
   @GObject.Signal(flags=GObject.SignalFlags.RUN_LAST, return_type=bool,
@@ -62,17 +74,8 @@ class App(GObject.Object):
   def build(self):
     for c in self.root.get_children():
       c.destroy()
-    #try:
-    #self.builder.add_from_file("Public/glade/main_ui.glade")
-    #self.builder.add_from_file("Public/glade/header.glade")
-    #self.builder.add_from_file("Public/glade/navbar.glade")
-    self.layout= Gtk.Fixed()
-    self.root.add(self.layout)
-    #self.builder.get_object("header_box").add(self.builder.get_object("header"))
-    #self.builder.get_object("main_box").add(self.builder.get_object("panel_01"))
-    #self.builder.get_object("nav_box").add(self.builder.get_object("navbar"))
-    #self.navbar = NavBar(self)
-    #self.update_header()  # adding functions and images to permenant part of page
+    self.hmi_layout= Gtk.Fixed() #this is the main layout that displays attach to. If in build mode, this layout is on a scroll
+    self.root.add(self.hmi_layout)
     self.start_app()
   
   def add_style(self, path):
@@ -84,9 +87,6 @@ class App(GObject.Object):
     cssProvider.load_from_path(path)
     styleContext.add_provider_for_screen(screen, cssProvider,
                                         Gtk.STYLE_PROVIDER_PRIORITY_USER)
-    #except error as e:
-    #  print(e)
-    #return False #True to hot load
   
   def confirm(self, runnable, msg="Are you sure?", args=[]):
     popup = PopupConfirm(self.root, msg=msg)
@@ -103,13 +103,9 @@ class App(GObject.Object):
     pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale("Public/images/logo.png", 50, 35, False)
     image = Gtk.Image()
     image.set_from_pixbuf(pixbuf)
-    self.builder.get_object("logo_box").add(image)
-    #assign function to exit button on header bar
-    self.builder.get_object("exit_button").connect("clicked",self.app_exit)
-    self.builder.get_object("refresh_switch").connect("notify::state",self.toggle_auto_refresh)
 
   def start_app(self, *args):
-    self.db_manager.open('./Public/test_project.db')
+    self.db_manager.open('./Public/test_project.db')#this is hard-coded for development
     session = self.db_manager.project_db.session
     app_config_table = self.db_manager.project_db.app_config.models["application-settings"]
     settings = session.query(app_config_table).order_by(app_config_table.id).first()
@@ -120,8 +116,8 @@ class App(GObject.Object):
     self.app_settings['height'] = settings.height
     self.app_settings['dark-theme'] = settings.dark_theme
     self.app_settings['startup-display'] = settings.startup_display
-    self.layout.set_property('width_request', self.app_settings["width"])
-    self.layout.set_property('height_request', self.app_settings["height"])
+    self.hmi_layout.set_property('width_request', self.app_settings["width"])
+    self.hmi_layout.set_property('height_request', self.app_settings["height"])
     settings = Gtk.Settings.get_default()
     settings.set_property("gtk-application-prefer-dark-theme", self.app_settings["dark-theme"])
     self.widget_factory.open_display(self.app_settings["startup-display"])
