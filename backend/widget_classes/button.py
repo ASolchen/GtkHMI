@@ -121,6 +121,10 @@ class ButtonWidget(Widget):
         sc.remove_class(state["Style"])
 
   def btn_press_action(self,*args):
+    if not self.on_press:
+      return
+    if not len(self.on_press):
+      return
     if self.confirm_on_press_msg:
       #Confirmation Type Button
       self.app.confirm(self.on_press_callback, self.confirm_on_press_msg)
@@ -132,6 +136,10 @@ class ButtonWidget(Widget):
 
     
   def btn_release_action(self,*args):
+    if not self.on_release:
+      return
+    if not len(self.on_release):
+      return
     if self.confirm_on_release_msg:
       #Confirmation Type Button
       self.app.confirm(self.on_release_callback,self.confirm_on_release_msg)
