@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) 2021 Jason Engman <jengman@testtech-solutions.com>
-# Copyright (c) 2021 Adam Solchenberger <asolchenberger@testtech-solutions.com>
+# Copyright (c) 2021 Adam Solchenberger <asolchenberger@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -71,15 +71,27 @@ WIDGET_TYPES = {
   }
     
 class WidgetFactory(GObject.Object):
+
+  @GObject.Property(type=bool, default=True, flags=GObject.ParamFlags.READWRITE)
+  def builder_mode(self):
+    return self._builder_mode  
+  @builder_mode.setter
+  def builder_mode(self, value):
+    self._builder_mode = value
+    #TODO do stuff here when builder mode is changed
   
   def __init__(self, app):
     super(WidgetFactory, self).__init__()
     self.app = app
     self.project_db = app.db_manager.project_db
     self.widget_config = self.project_db.widget_config
-    self.builder_mode = True
+    self._builder_mode = app.builder_mode
+    sig = app.connect('notify::builder-mode', self.on_app_builder_mode)
     self.widget_types = WIDGET_TYPES
-    self.displays = {} #used to ref id to Python class of the open displays   
+    self.displays = {} #used to ref id to Python class of the open displays
+
+  def on_app_builder_mode(self, app, signal):
+    self.builder_mode = app.builder_mode 
 
   def open_display(self, widget_id, replacements=[]):
     session = self.project_db.session
@@ -104,7 +116,7 @@ class WidgetFactory(GObject.Object):
         self.displays[display].widget.destroy()
         self.displays[display].shutdown()
         del(self.displays[display])
-      params["parent"] = self.app.layout
+      params["parent"] = self.app.hmi_layout
       id = params["id"]
       self.displays[id] = self.create_widget(DisplayWidget, params)
       self.displays[id].widget.show_all()

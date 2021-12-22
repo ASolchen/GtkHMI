@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) 2021 Jason Engman <jengman@testtech-solutions.com>
-# Copyright (c) 2021 Adam Solchenberger <asolchenberger@testtech-solutions.com>
+# Copyright (c) 2021 Adam Solchenberger <asolchenberger@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +37,7 @@ class Widget(GObject.Object):
   def get_params_from_orm(cls, result):
     """
     pass in an orm result (database query result) and this will update the params dictionary
-    with the table columns
+    with the table columns. the params object is used to pass into a widget's init
     
     """
     params = {
@@ -98,15 +98,25 @@ class Widget(GObject.Object):
   def global_reference(self):
     return self._global_reference
 
+  @GObject.Property(type=bool, default=True, flags=GObject.ParamFlags.READWRITE)
+  def builder_mode(self):
+    return self._builder_mode  
+  @builder_mode.setter
+  def builder_mode(self, value):
+    self._builder_mode = value
+    #TODO do stuff here when builder mode is changed
+
   def __init__(self, factory, params):
     GObject.Object.__init__(self)
     self.factory = factory
     self.app = factory.app
+    self._builder_mode = self.app.builder_mode
+    self.signals = [(self.app, self.app.connect("notify::builder-mode", self.on_app_builder_mode)),]
     self.connection_manager = factory.app.connection_manager
     self.db_session = factory.project_db.session
-    self.builder_mode = factory.builder_mode
+    
     self.tag_ids = {} #TODO < see if this is used
-    self.signals = []
+    
     replacements = params.get('replacements')
     if replacements:
       self.substitute_replacements(replacements, params)
@@ -136,11 +146,12 @@ class Widget(GObject.Object):
     
 
     self.widget_ids={} #used to ref IDs to Python classes of children
-    self.signals.append(self.connection_manager.connect("tag_update", self.update)) #listen for tag updates
+    self.signals.append((self.connection_manager, self.connection_manager.connect("tag_update", self.update))) #listen for tag updates
     self.polling = True
     self.attach_to_parent()
     self.build_children()
     self.count = 0
+    GObject.timeout_add(3000, self.kill_children)
   
   def __repr__(self):
     return f'GTK HMI {self.__class__.__name__}'
@@ -148,7 +159,8 @@ class Widget(GObject.Object):
   def __str__(self):
     return f'GTK HMI {self.__class__.__name__}: {self.id}'
 
-
+  def on_app_builder_mode(self, app, signal):
+    self.builder_mode = app.builder_mode 
 
   def move(self):
     self.parent.move(self.widget, self.x, self.y)
@@ -177,14 +189,24 @@ class Widget(GObject.Object):
       self.app.display_event(event_msg)
 
   def kill_children(self, level=0):
-    for signal in self.signals:
-      self.connection_manager.disconnect(signal)
+    """
+    disconnects all signals of this widget and all of its children
+    removes visual widget and childrens widgets
+    this object cannot delete itself so parent of this also needs to del(this_object)
+    e.g.
+    self.ids['78'].kill_children()
+    del(self.ids['78']) 
+    """
+    for gobject, signal in self.signals:
+      gobject.disconnect(signal)
     self.signals = []
     level+=1
     children = list(self.widget_ids)
     for w_id in children:      
       self.widget_ids[w_id].kill_children(level)
+      self.widget_ids[w_id].parent.remove(self.widget_ids[w_id].widget)
       del(self.widget_ids[w_id])
+
 
   def animate(self, anim_type, val):
     #lookup animations
