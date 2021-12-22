@@ -25,7 +25,7 @@
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-from builder.app import App
+from builder.builder_ui import App
 
 win = Gtk.Window(title="Gtk HMI Builder")
 app = App(win)

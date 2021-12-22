@@ -29,6 +29,7 @@ from gi.repository import Gtk
 from app import App
 
 win = Gtk.Window()
+win.set_title('GtkHMI')
 app = App(win)
 win.show_all()
 win.set_decorated(False)

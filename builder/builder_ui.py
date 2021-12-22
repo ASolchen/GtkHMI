@@ -30,43 +30,11 @@ from builder.menu import Menu
 from builder.widget_panels.widget_panel import BuilderToolsWidget, AdvancedBuilderToolsWidget
 from builder.widget_panels.popup import WidgetSettingsPopup, ConnectionListWindow, TagsListWindow,CreateWidgetWindow
 
-class BuilderWidgetFactory(GObject.Object):
-  #skelton class to trick the widgets
+class BuilderLayout(Gtk.Box):
   def __init__(self, app):
-    super(BuilderWidgetFactory, self).__init__()
+    super(BuilderLayout, self).__init__()
     self.app = app
-    self.builder_mode = True
-    self.db_manager = app.db_manager
-    self.widget_types = WIDGET_TYPES
-  @GObject.Signal(flags=GObject.SignalFlags.RUN_LAST, return_type=bool,
-                  arg_types=(object,),
-                  accumulator=GObject.signal_accumulator_true_handled)
-
-  def tag_update(self, tag_update):
-    pass #probably not gonna call this in the builder
-
-
-class App(GObject.Object):
-  
-  """    
-  Base class of the app to hold all refs and logic
-  main passes in the Gtk Builder object so all named widgets can be referenced
-
-  """
-
-  def __init__(self, root): 
-    super(App, self).__init__()
-    self.root = root
-    #private props
-    #root.connect("delete-event", lambda *args: self.confirm(self.shutdown,"Do you really want to exit?"))  
-    root.connect("delete-event", self.app_exit)
-    root.connect('destroy', Gtk.main_quit)
-    settings = Gtk.Settings.get_default()
-    settings.set_property("gtk-application-prefer-dark-theme", True)
-    self.db_manager = DatabaseManager(self)
-    self.connection_manager = ConnectionManager(self)
-    self.factory = BuilderWidgetFactory(self)
-    self.db_open = False
+    self.hmi_layout = app.hmi_layout
     self.build_interface()
     #self.open_database("backend/     mill.db")
     self.db_file_path = ""
@@ -79,24 +47,11 @@ class App(GObject.Object):
     self.active_display = None  #Keeps track of which display is being edited
     self.click_panel = None
   
-  @GObject.Signal(flags=GObject.SignalFlags.RUN_LAST, return_type=bool,
-                    arg_types=(object,),
-                    accumulator=GObject.signal_accumulator_true_handled)
-  def db_ready(self, db_manager):
-    #Lets other objects knkow the db_manager is ready
-    self.db_open =  True
-    self.enable_widgets()
-  
   def open_database(self, path):
-    self.db_manager.init_sqlite_db(path) 
-    self.db_file_path  = path # hang onto this for regular saves
-    self.alarm_manager = AlarmEventViewHandler(self)
-    self.emit("db_ready", self.db_manager)
-    self.revert()
+    pass
   
   def revert(self, *args):
-    self.build_widget_tree()
-    self.root.show_all()
+    pass
 
   def build_interface(self):
     #try:
@@ -134,6 +89,7 @@ class App(GObject.Object):
     right_frame.set_label("Build")
     v_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
     self.build_panel = Gtk.EventBox()
+    self.build_panel.add(self.hmi_layout)
     #self.build_panel.connect("button_release_event",self.build_panel_clicked)
 
     self.button_bar = Gtk.Box(spacing=10, height_request=50)
@@ -165,7 +121,7 @@ class App(GObject.Object):
     v_box.pack_start(self.button_bar,0,0,2)
     right_frame.add(v_box)  
     
-    self.size = (1920, 900)
+    self.size = (640, 480)
     self.layout = Gtk.Box(width_request=self.size[0], height_request=self.size[1],
     orientation=Gtk.Orientation.VERTICAL, spacing=20)
     menu_box=Gtk.Box(width_request=self.size[0], height_request=8)
@@ -173,7 +129,7 @@ class App(GObject.Object):
     menu_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
     menu_box.pack_start(self.menu, 0, 0, 0)
     self.layout.add(menu_box)
-    self.root.add(self.layout)
+    self.add(self.layout)
     left_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,height_request=(self.size[1]),homogeneous = True)
     bottom_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
     self.layout.pack_start(bottom_box,1,1,8)
@@ -183,7 +139,6 @@ class App(GObject.Object):
     bottom_box.pack_start(left_box,0,1,10)
     bottom_box.pack_start(right_frame,1,1,10)
     self.widget_tree_data = {} #stores a list of widget tree iter and ID
-    self.build_panel_layout = Gtk.Fixed() #layout where all widgets are added  
     self.tree_columns = ["ID", "ParentID", "Class"]
     self.widget_data = Gtk.TreeStore(str, str, str)
     self.widget_tree = Gtk.TreeView(self.widget_data) # put the list in the Treeview
@@ -233,7 +188,7 @@ class App(GObject.Object):
       self.get_widgets(widget_data_iter, row[0])
 
   def tree_right_click(self, action, param):
-    about_dialog = Gtk.AboutDialog(transient_for=self.root, modal=True)
+    about_dialog = Gtk.AboutDialog(transient_for=self, modal=True)
     about_dialog.present()
   
   def build_panel_clicked(self,widget,event,*args):
@@ -316,7 +271,7 @@ class App(GObject.Object):
       vbox.pack_start(edit_btn, False, True, 10)
       popover.add(vbox)
       popover.set_position(Gtk.PositionType.RIGHT)
-      popover.set_relative_to(self.build_panel_layout)
+      popover.set_relative_to(self.hmi_layout)
       popover.set_pointing_to(rect)
       popover.show_all()
       sc = popover.get_style_context()
@@ -391,6 +346,7 @@ class App(GObject.Object):
       self.refresh_panel(w_id,p_id)
 
   def refresh_panel(self,w_id,p_id,*args):
+    return # for now
     #w_id = which widget was selected
     #p_id = which panel is currently being displayed
     if w_id == None:
@@ -398,9 +354,9 @@ class App(GObject.Object):
     g_displays = 0
     for c in self.build_panel.get_children():
       self.build_panel.remove(c)
-    for c in self.build_panel_layout.get_children():
-      self.build_panel_layout.remove(c)
-    self.build_panel.add(self.build_panel_layout)
+    for c in self.hmi_layout.get_children():
+      self.hmi_layout.remove(c)
+    self.build_panel.add(self.hmi_layout)
     params = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ID", p_id)[0]
     if params["ParentID"] == "GLOBAL":
       g_displays +=1
@@ -410,25 +366,26 @@ class App(GObject.Object):
         w_class = Widget
       else:
         w_class = WIDGET_TYPES[params["Class"]]
-      w_class(self.factory, self.build_panel_layout, params)
+      w_class(self.factory, self.hmi_layout, params)
       pass # make generic display and add global to it
     else:
       params["Display"] = params["ID"] #display is its own parent
-      self.display = DisplayWidget(self.factory, self.build_panel_layout, params, replacements=[])
+      self.display = DisplayWidget(self.factory, self.hmi_layout, params, replacements=[])
     self.add_click_panel(self.active_display)
     self.add_widget_highlight(w_id)
     self.update_settings_panel(w_id)
     self.build_panel.show_all()
   
   def add_click_panel(self,w_id,*args):
+    return
     if self.click_panel != None:
-      self.build_panel_layout.remove(self.click_panel)
+      self.hmi_layout.remove(self.click_panel)
     x,y,w,h = self.get_widgets_rectangle(w_id)
     self.click_panel = Gtk.EventBox(name=w_id, width_request=w+8,height_request=h+8)
     self.click_panel.connect("button_release_event",self.build_panel_clicked)
     sc = self.click_panel.get_style_context()
     sc.add_class("builder-see-through")
-    self.build_panel_layout.put(self.click_panel, x-2, y-2)
+    self.hmi_layout.put(self.click_panel, x-2, y-2)
     self.build_panel.show_all()
 
   def add_widget_highlight(self,w_id,*args):
@@ -443,7 +400,7 @@ class App(GObject.Object):
     highlight_box = Gtk.Box(width_request=w+8, height_request=h+8)
     sc = highlight_box.get_style_context()
     sc.add_class("builder-highlight")
-    self.build_panel_layout.put(highlight_box, x-2, y-2)
+    self.hmi_layout.put(highlight_box, x-2, y-2)
     self.build_panel.show_all()
     self.widget_highlighted = highlight_box
 
@@ -461,13 +418,13 @@ class App(GObject.Object):
       self.settings_panel.show_all()
   
   def open_widget_popup(self, button):
-    popup = WidgetSettingsPopup(self.root, self, self.db_manager, button.get_property("name"))
+    popup = WidgetSettingsPopup(self, self, self.db_manager, button.get_property("name"))
     response = popup.run()
     popup.destroy()
   
   def setup_connection(self,*args):
     if self.db_open:
-      popup = ConnectionListWindow(self.root, self, self.db_manager)
+      popup = ConnectionListWindow(self, self, self.db_manager)
     else:
       #If database not open then force user to open DB first
       self.open_database_req()
@@ -482,20 +439,20 @@ class App(GObject.Object):
   def add_widget(self,button,*args):
     if self.db_open:
       wid_id = button.get_property("name")
-      popup = CreateWidgetWindow(self.root, self, self.db_manager,'New',wid_id)
+      popup = CreateWidgetWindow(self, self, self.db_manager,'New',wid_id)
     else:
       #If database not open then force user to open DB first
       self.open_database_req()
 
   def add_display(self,button,*args):
     if self.db_open:
-      popup = CreateWidgetWindow(self.root, self, self.db_manager,'display',None)
+      popup = CreateWidgetWindow(self, self, self.db_manager,'display',None)
     else:
       #If database not open then force user to open DB first
       self.open_database_req()
 
   def confirm(self, runnable, msg="Are you sure?", args=[]):
-    popup = PopupConfirm(self.root, msg=msg)
+    popup = PopupConfirm(self, msg=msg)
     response = popup.run()
     popup.destroy()
     if response == Gtk.ResponseType.YES:
@@ -506,7 +463,7 @@ class App(GObject.Object):
       return False
   
   def display_msg(self, runnable, msg="Something has gone wrong", args=[]):
-    popup = PopupMsg(self.root, msg=msg)
+    popup = PopupMsg(self, msg=msg)
     response = popup.run()
     popup.destroy()
     if response == Gtk.ResponseType.YES:
@@ -541,7 +498,7 @@ class App(GObject.Object):
     Gtk.main_quit()
   
   def app_exit(self,*args):
-    popup = PopupConfirm(self.root, msg='Are you sure you want to exit')
+    popup = PopupConfirm(self, msg='Are you sure you want to exit')
     response = popup.run()
     popup.destroy()
     if response == Gtk.ResponseType.NO:

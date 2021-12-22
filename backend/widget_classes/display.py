@@ -64,6 +64,7 @@ class DisplayWidget(Widget):
   def startup(self):
     if self.builder_mode:
       return
+    return
     self.db_manager.clear_tag_subs(self.id)
     GObject.timeout_add(self.pollrate* 1000, self.update_tags)
     if self.startup_script:

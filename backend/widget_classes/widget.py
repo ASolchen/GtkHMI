@@ -151,7 +151,6 @@ class Widget(GObject.Object):
     self.attach_to_parent()
     self.build_children()
     self.count = 0
-    GObject.timeout_add(3000, self.kill_children)
   
   def __repr__(self):
     return f'GTK HMI {self.__class__.__name__}'

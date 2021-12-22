@@ -30,7 +30,8 @@ from popups.popup import PopupConfirm, PopupMsg, ValueEnter, Keyboard, SaveFile,
 from backend.widget_classes.factory import WidgetFactory
 from backend.managers.database import DatabaseManager
 from backend.managers.datalog import AlarmEventViewHandler
-from backend.managers.connection_classes.manager import ConnectionManager 
+from backend.managers.connection_classes.manager import ConnectionManager
+from builder.builder_ui import BuilderLayout
 
 class App(GObject.Object):  
   """    
@@ -43,11 +44,13 @@ class App(GObject.Object):
   @builder_mode.setter
   def builder_mode(self, value):
     self._builder_mode = value
+    self.build()
 
   def __init__(self, root):
     super(App, self).__init__()
     self.root = root
-    self._builder_mode = True
+    root.connect("key-press-event", self.on_key_press_event)
+    self._builder_mode = False
     self.auto_refresh = False
     root.connect("delete-event", lambda *args: self.confirm(self.shutdown,"Do you really want to exit?"))
     with open("Public/app_settings.json", "r") as fp:
@@ -57,12 +60,15 @@ class App(GObject.Object):
     self.connection_manager = ConnectionManager(self)
     self.widget_factory = WidgetFactory(self)
     #self.alarm_manager = AlarmEventViewHandler(self)
+    self.hmi_layout= Gtk.Fixed() #this is the main layout that displays attach to. If in build mode, this layout is on a scroll
+    self.hmi_layout_parent = None # in builder mode the hmi_layout is attached to this, hang on to remove if going back to run mode
     self.build()
-    GObject.timeout_add(1000, self.test_builder_mode)
+    self.start_app()
 
-  def test_builder_mode(self, *args):
-    self.builder_mode = not self.builder_mode
-    return True
+  def on_key_press_event(self, window, event):
+    #toggle builder mode using ctrl-b
+    if event.state & Gdk.ModifierType.CONTROL_MASK and event.keyval == 98:
+      self.builder_mode = not self.builder_mode
       
 
   @GObject.Signal(flags=GObject.SignalFlags.RUN_LAST, return_type=bool,
@@ -72,11 +78,26 @@ class App(GObject.Object):
     pass #Lets other objects knkow the db_manager is ready
     
   def build(self):
+    parent = self.hmi_layout.get_parent()
+    if parent:
+        parent.remove(self.hmi_layout)
     for c in self.root.get_children():
       c.destroy()
-    self.hmi_layout= Gtk.Fixed() #this is the main layout that displays attach to. If in build mode, this layout is on a scroll
-    self.root.add(self.hmi_layout)
-    self.start_app()
+    self.root.resize(100, 100) # make is small and let widgets expand it
+    if self.builder_mode:
+      bl = BuilderLayout(self)
+      self.root.add(bl)
+      self.root.set_decorated(True)
+      self.root.set_has_resize_grip(True)
+    else:
+      self.root.set_decorated(False)
+      self.root.set_has_resize_grip(False)
+      self.root.add(self.hmi_layout)
+    self.root.show_all()
+    
+
+  def build_builder_layout(self):
+    pass
   
   def add_style(self, path):
     #try:
