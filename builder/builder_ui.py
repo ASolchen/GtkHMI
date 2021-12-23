@@ -27,6 +27,8 @@ from backend.managers.database import DatabaseManager
 from backend.managers.datalog import AlarmEventViewHandler
 from backend.managers.connection_classes.manager import ConnectionManager 
 from builder.menu import Menu
+from builder.widget_explorer import WidgetExplorer
+from builder.widget_panels.display_edit_panel import DisplayEditPanel
 from builder.widget_panels.widget_panel import BuilderToolsWidget, AdvancedBuilderToolsWidget
 from builder.widget_panels.popup import WidgetSettingsPopup, ConnectionListWindow, TagsListWindow,CreateWidgetWindow
 
@@ -46,12 +48,6 @@ class BuilderLayout(Gtk.Box):
     self.widget_clicked = None
     self.active_display = None  #Keeps track of which display is being edited
     self.click_panel = None
-  
-  def open_database(self, path):
-    pass
-  
-  def revert(self, *args):
-    pass
 
   def build_interface(self):
     #try:
@@ -88,37 +84,8 @@ class BuilderLayout(Gtk.Box):
     right_frame = Gtk.Frame()
     right_frame.set_label("Build")
     v_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-    self.build_panel = Gtk.EventBox()
-    self.build_panel.add(self.hmi_layout)
-    #self.build_panel.connect("button_release_event",self.build_panel_clicked)
-
-    self.button_bar = Gtk.Box(spacing=10, height_request=50)
-    button = Gtk.Button("Open", width_request=100)
-    button.connect("clicked", self.open_database_req)
-    self.button_bar.pack_start(button, 0,0,4)
-    
-    button = Gtk.Button("Revert", width_request=100)
-    button.connect("clicked", self.revert)
-    self.button_bar.pack_start(button, 0,0,4)
-    
-    button = Gtk.Button("Save", width_request=100)
-    button.connect("clicked", self.save_db)
-    self.button_bar.pack_start(button, 0,0,4)
-    
-    button = Gtk.Button("Save As", width_request=100)
-    button.connect("clicked", self.save_db_as)
-    self.button_bar.pack_start(button, 0,0,4)
-    
-    button = Gtk.Button("Test Run", width_request=100)
-    button.connect("clicked", self.test_run)
-    self.button_bar.pack_start(button, 0,0,4)
-    
-    button = Gtk.Button("New Widget", width_request=100)
-    button.connect("clicked", self.add_widget)
-    self.button_bar.pack_start(button, 0,0,4)
-
+    self.build_panel = DisplayEditPanel(self)
     v_box.pack_start(self.build_panel,1,1,2)
-    v_box.pack_start(self.button_bar,0,0,2)
     right_frame.add(v_box)  
     
     self.size = (640, 480)
@@ -138,58 +105,8 @@ class BuilderLayout(Gtk.Box):
     left_box.pack_start(left_bottom_frame,0,1,5)
     bottom_box.pack_start(left_box,0,1,10)
     bottom_box.pack_start(right_frame,1,1,10)
-    self.widget_tree_data = {} #stores a list of widget tree iter and ID
-    self.tree_columns = ["ID", "ParentID", "Class"]
-    self.widget_data = Gtk.TreeStore(str, str, str)
-    self.widget_tree = Gtk.TreeView(self.widget_data) # put the list in the Treeview
-    self.widget_tree.connect("button_press_event", self.tree_item_clicked)
-    self.widget_tree.set_grid_lines(Gtk.TreeViewGridLines.BOTH)
-    for i, col_title in enumerate(self.tree_columns):
-      renderer = Gtk.CellRendererText()
-      col = Gtk.TreeViewColumn(col_title, renderer, text=i)
-      col.set_sort_column_id(i)
-      self.widget_tree.append_column(col)
+    self.navigator_panel.pack_start(WidgetExplorer(self),1,1,2)
 
-    #add navigator window window
-    scroll = Gtk.ScrolledWindow()
-    scroll.add(self.widget_tree)
-    self.navigator_panel.pack_start(scroll,1,1,2)
-
-  def build_widget_tree(self):
-    self.widget_data.clear()
-    style_res = self.db_manager.get_rows("ApplicationSettings", ["Stylesheet"])
-    if len(style_res):
-      style_file = style_res[0]["Stylesheet"]
-      self.add_style(style_file)
-    self.get_widgets(None, None)
-    self.get_widgets(None, "GLOBAL")
-  
-  def enable_widgets(self,*args):
-    #put items in here want to be enabled after database is opened
-    self.tag_button.set_sensitive(True)
-    self.conn_button.set_sensitive(True)
-
-  def get_widgets(self, parent_iter, parent_id):
-    if not parent_id:
-      rows = self.db_manager.run_query(
-        'SELECT [ID], [ParentID], [Class] FROM [Widgets] WHERE [ParentID] IS NULL ORDER BY [BuildOrder] ASC, [ID] ASC')
-    elif parent_id == "GLOBAL":
-      rows = self.db_manager.run_query(
-        'SELECT [ID], [ParentID], [Class] FROM [Widgets] WHERE [ParentID] IS "GLOBAL" ORDER BY [BuildOrder] ASC, [ID] ASC')
-    else:
-      rows = self.db_manager.run_query(
-        'SELECT [ID], [ParentID], [Class] FROM [Widgets] WHERE [ParentID] = ? ORDER BY [BuildOrder] ASC, [ID] ASC', [parent_id])
-    for row in rows:
-      store_row = []
-      for col in self.tree_columns:
-        store_row.append(row[col])
-      widget_data_iter = self.widget_data.insert(parent_iter, 0, store_row)
-      self.widget_tree_data[row[0]]=widget_data_iter
-      self.get_widgets(widget_data_iter, row[0])
-
-  def tree_right_click(self, action, param):
-    about_dialog = Gtk.AboutDialog(transient_for=self, modal=True)
-    about_dialog.present()
   
   def build_panel_clicked(self,widget,event,*args):
     widget_found = False
@@ -278,72 +195,6 @@ class BuilderLayout(Gtk.Box):
       sc.add_class('popover-bg')
       sc.add_class('font-16')
 
-
-  def tree_item_clicked(self, treeview, event):
-    pthinfo = treeview.get_path_at_pos(event.x, event.y)
-    if event.button == 1: #left click
-      pthinfo = treeview.get_path_at_pos(event.x, event.y)
-      if pthinfo != None:
-        path,col,cellx,celly = pthinfo
-        treeview.grab_focus()
-        treeview.set_cursor(path,col,0)
-        #update currently active display
-        selection = treeview.get_selection()
-        tree_model, tree_iter = selection.get_selected()
-        self.active_display = tree_model[tree_iter][0]
-        self.base_panel_open = tree_model[tree_iter][0]
-        self.global_reference = None
-      else:
-        #unselect row in treeview
-        selection = treeview.get_selection()
-        selection.unselect_all()
-    elif event.button == 3: #right click
-      rect = Gdk.Rectangle()
-      rect.x = event.x
-      rect.y = event.y + 10
-      rect.width = rect.height = 1
-      selection = treeview.get_selection()
-      tree_model, tree_iter = selection.get_selected()
-      popover = Gtk.Popover(width_request = 200)
-      vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-      if tree_iter is None:
-        #popover to add display
-        add_display_btn = Gtk.ModelButton(label="Add Display",name=None)
-        cb = lambda btn: self.add_display(btn)
-        add_display_btn.connect("clicked", cb)
-        vbox.pack_start(add_display_btn, False, True, 10)
-        #return
-      else:
-        w_id = tree_model[tree_iter][0]
-        edit_btn = Gtk.ModelButton(label="Edit", name=w_id)
-        cb = lambda btn: self.open_widget_popup(btn)
-        edit_btn.connect("clicked", cb)
-        vbox.pack_start(edit_btn, False, True, 10)
-        class_type = tree_model[tree_iter][2]
-        if class_type == 'display':
-          add_btn = Gtk.ModelButton(label="Add Widget", name=w_id)
-          cb = lambda btn:self.add_widget(btn)
-          add_btn.connect("clicked", cb)
-          vbox.pack_start(add_btn, False, True, 10)
-      popover.add(vbox)
-      popover.set_position(Gtk.PositionType.RIGHT)
-      popover.set_relative_to(treeview)
-      popover.set_pointing_to(rect)
-      popover.show_all()
-      sc = popover.get_style_context()
-      sc.add_class('popover-bg')
-      sc.add_class('font-16')
-      return
-    else:
-      return
-    selection = treeview.get_selection()
-    tree_model, tree_iter = selection.get_selected()
-    #Rebuild panel with widgets
-    if tree_iter is not None:
-      w_id = tree_model[tree_iter][0]
-      #self.active_widget = w_id
-      p_id = self.get_widgets_display(w_id)
-      self.refresh_panel(w_id,p_id)
 
   def refresh_panel(self,w_id,p_id,*args):
     return # for now
@@ -452,7 +303,7 @@ class BuilderLayout(Gtk.Box):
       self.open_database_req()
 
   def confirm(self, runnable, msg="Are you sure?", args=[]):
-    popup = PopupConfirm(self, msg=msg)
+    popup = PopupConfirm(self.app.root, msg=msg)
     response = popup.run()
     popup.destroy()
     if response == Gtk.ResponseType.YES:
@@ -477,7 +328,7 @@ class BuilderLayout(Gtk.Box):
     self.confirm(cb, msg, *args)
 
   def open_file(self, callback, args=[], msg="Open a file",filter_pattern = []):
-    openIT = OpenFile(app=self,message = msg,filter_pat = filter_pattern)
+    openIT = OpenFile(app=self.app,message = msg,filter_pat = filter_pattern)
     response = openIT.run()
     if response == Gtk.ResponseType.OK:
         fn = openIT.get_filename()
@@ -485,7 +336,7 @@ class BuilderLayout(Gtk.Box):
     openIT.destroy()
   
   def save_file(self, callback, args=[], file_hint = None, filter_pattern = []):
-    saveIT = SaveFile(app=self,hint = file_hint,filter_pat = filter_pattern)
+    saveIT = SaveFile(app=self.app,hint = file_hint,filter_pat = filter_pattern)
     response = saveIT.run()
     if response == Gtk.ResponseType.OK:
       fp = saveIT.get_filename()
@@ -498,7 +349,7 @@ class BuilderLayout(Gtk.Box):
     Gtk.main_quit()
   
   def app_exit(self,*args):
-    popup = PopupConfirm(self, msg='Are you sure you want to exit')
+    popup = PopupConfirm(self.app.root, msg='Are you sure you want to exit')
     response = popup.run()
     popup.destroy()
     if response == Gtk.ResponseType.NO:
@@ -530,48 +381,20 @@ class BuilderLayout(Gtk.Box):
   '''
 
   def open_database_req(self, *args):
-    self.open_file(self.open_database, filter_pattern=["*.db"])
+    def set_db(path):
+      self.app.db = path # setting a new path on this app property will trigger it to open session
+    self.open_file(set_db, filter_pattern=["*.db"])
+  
+  def create_database_req(self, *args):
+    def set_db(path):
+      self.app.db = path# setting a new path on this app property will trigger it to create and open session
+    self.save_file(set_db, filter_pattern=["*.db"])
 
   def save_db(self, button):
     self.db_manager.write_sqlite_db(self.db_file_path)
 
   def save_db_as(self, button):
     self.save_file(self.db_manager.write_sqlite_db, filter_pattern=["*.db"])
-
-  def test_run(self, btn):
-    os.system("python main.py")
-  
-  def save_widget_base(self, params):
-    #send in a list of dictionaries of [("Widgets", {"ID": "blah", "X": 50...}), ("WidgetParams-numeric_entry", {})]
-    if  self.global_coordinates["x"] != params["X"]:
-      #adjusting absolute position if item was moved
-      new_pos = params["X"] - self.global_coordinates["x"]
-      self.global_coordinates["abs_x"] = self.global_coordinates["abs_x"]+new_pos
-    if  self.global_coordinates["y"] != params["Y"]:
-      #adjusting absolute position if item was moved
-      new_pos = params["Y"] - self.global_coordinates["y"]
-      self.global_coordinates["abs_y"] = self.global_coordinates["abs_y"]+new_pos
-    self.global_coordinates["x"]=params["X"]
-    self.global_coordinates["y"]=params["Y"]
-    if self.db_file_path == "":
-      return
-    c = self.db_manager.mem_db.cursor()
-    rows = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ID", params["ID"])
-    exists = bool(len(rows))
-    if exists:
-      #can only return one row because ID is unique
-      self.db_manager.update_db_row('Widgets',params)
-    #else:
-    #  sql = """
-    #  INSERT INTO "main"."Widgets" ("ID", "ParentID", "X", "Y", "Width", "Height", "Class", "Description", "Styles", "GlobalReference", "BuildOrder")
-    #  VALUES ('{ID}', '{ParentID}', '{X}', '{Y}', '{Width}', '{Height}', '{Class}', '{Description}', '{Styles}', '{GlobalReference}', '{BuildOrder}');""".format(**params)
-    #  print(sql)
-    #  c.execute(sql)
-
-    self.db_manager.mem_db.commit()
-    self.db_manager.copy_table('Widgets')
-    self.build_widget_tree()
-    self.refresh_panel(self.widget_clicked,self.base_panel_open)
       
   def get_widgets_display(self, w_id):
     display = w_id #move up the tree to find the top level widget
@@ -616,10 +439,3 @@ class BuilderLayout(Gtk.Box):
     cssProvider.load_from_path(path)
     styleContext.add_provider_for_screen(screen, cssProvider,
                                         Gtk.STYLE_PROVIDER_PRIORITY_USER)
-
-  def display_event(self,msg):
-    self.db_manager.emit('save_event',msg)
-
-  def get_serial_ports(self,*args):
-    ports = []
-    return ports

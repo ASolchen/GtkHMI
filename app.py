@@ -63,7 +63,6 @@ class App(GObject.Object):
     root.connect("key-press-event", self.on_key_press_event)
     self._builder_mode = not len(db)
     self.auto_refresh = False
-    root.connect("delete-event", lambda *args: self.confirm(self.shutdown,"Do you really want to exit?"))
     with open("Public/app_settings.json", "r") as fp:
       self.app_settings = json.load(fp)    
     #settings.set_property("set_decorate",False)
@@ -135,6 +134,9 @@ class App(GObject.Object):
     pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale("Public/images/logo.png", 50, 35, False)
     image = Gtk.Image()
     image.set_from_pixbuf(pixbuf)
+
+  def open_new(self, path):
+    print(path)
 
   def open_db_session(self):
     self.db_manager.open(self.db)
