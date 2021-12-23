@@ -43,14 +43,25 @@ class App(GObject.Object):
     return self._builder_mode  
   @builder_mode.setter
   def builder_mode(self, value):
-    self._builder_mode = value
+    self._builder_mode = value or not len(self.db)
     self.build()
 
-  def __init__(self, root):
+  @GObject.Property(type=str,flags=GObject.ParamFlags.READWRITE)
+  def db(self):
+    return self._db  
+  @db.setter
+  def db(self, value):
+    self._db = value
+    if len(value):
+      self.open_db_session()
+    else:
+      self.close_db_session()
+    
+  def __init__(self, root, db):
     super(App, self).__init__()
     self.root = root
     root.connect("key-press-event", self.on_key_press_event)
-    self._builder_mode = False
+    self._builder_mode = not len(db)
     self.auto_refresh = False
     root.connect("delete-event", lambda *args: self.confirm(self.shutdown,"Do you really want to exit?"))
     with open("Public/app_settings.json", "r") as fp:
@@ -63,7 +74,7 @@ class App(GObject.Object):
     self.hmi_layout= Gtk.Fixed() #this is the main layout that displays attach to. If in build mode, this layout is on a scroll
     self.hmi_layout_parent = None # in builder mode the hmi_layout is attached to this, hang on to remove if going back to run mode
     self.build()
-    self.start_app()
+    self.db = db
 
   def on_key_press_event(self, window, event):
     #toggle builder mode using ctrl-b
@@ -125,8 +136,8 @@ class App(GObject.Object):
     image = Gtk.Image()
     image.set_from_pixbuf(pixbuf)
 
-  def start_app(self, *args):
-    self.db_manager.open('./Public/test_project.db')#this is hard-coded for development
+  def open_db_session(self):
+    self.db_manager.open(self.db)
     session = self.db_manager.project_db.session
     app_config_table = self.db_manager.project_db.app_config.models["application-settings"]
     settings = session.query(app_config_table).order_by(app_config_table.id).first()
@@ -143,7 +154,12 @@ class App(GObject.Object):
     settings.set_property("gtk-application-prefer-dark-theme", self.app_settings["dark-theme"])
     self.widget_factory.open_display(self.app_settings["startup-display"])
     self.add_style(self.app_settings['style-sheet'])
-    return self.auto_refresh
+  
+  def close_db_session(self):
+    self.widget_factory.kill_all()
+    if self.db_manager.project_db.session:
+      self.db_manager.project_db.close()
+
 
   def shutdown(self,*args):
     self.db_manager.clear_tag_subs(next(iter(self.widget_factory.displays)))

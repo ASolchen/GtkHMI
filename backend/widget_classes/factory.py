@@ -171,3 +171,9 @@ class WidgetFactory(GObject.Object):
       return self.displays[display_id].get_widget_by_id(widget_id)
     return None
 
+  def kill_all(self):
+    for display in self.displays:
+        self.displays[display].kill_children()
+        del(self.displays[display])
+
+

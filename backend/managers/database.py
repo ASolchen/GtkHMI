@@ -38,6 +38,11 @@ class DatabaseManager(GObject.Object):
   
   def open(self, path):
     self.project_db.open(path)
+  
+  def close_project_db(self):
+    self.project_db.close()
+
+
   def write_sqlite_db(self, path):
     pass
    

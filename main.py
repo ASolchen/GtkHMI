@@ -22,17 +22,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-
+import sys
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 from app import App
 
+db = ''
+if len(sys.argv)>1:
+  db = sys.argv[1]
+
+
 win = Gtk.Window()
 win.set_title('GtkHMI')
-app = App(win)
+app = App(win, db)
 win.show_all()
-win.set_decorated(False)
 Gtk.main()
 
 
