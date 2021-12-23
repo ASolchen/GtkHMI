@@ -22,14 +22,20 @@
 # SOFTWARE.
 # 
 
-import json, numbers, ast
+import ast
+import json
+import numbers
+
 import gi
+
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GObject, Gdk, GdkPixbuf
 import re
 import time
+
 from backend.exceptions import GtkHmiError, WidgetParamsError
 from backend.managers.database_models.widget_database import WidgetParams
+from gi.repository import Gdk, GdkPixbuf, GObject, Gtk
+
 
 class Widget(GObject.Object):
   orm_model = WidgetParams
@@ -110,39 +116,17 @@ class Widget(GObject.Object):
     GObject.Object.__init__(self)
     self.factory = factory
     self.app = factory.app
+    self.params = params.copy()
     self._builder_mode = self.app.builder_mode
     self.signals = [(self.app, self.app.connect("notify::builder-mode", self.on_app_builder_mode)),]
     self.connection_manager = factory.app.connection_manager
     self.db_session = factory.project_db.session
-    
     self.tag_ids = {} #TODO < see if this is used
-    
-    replacements = params.get('replacements')
-    if replacements:
-      self.substitute_replacements(replacements, params)
-    self.animations = [] if not params.get("animations") else params.get("animations")
-    self.states = [] if not not params.get("states") else params.get("states")
-    #private settings
-    try:
-      self._id = params['id']
-      self._x= params['x']
-      self._y= params['y']
-      self._width = params['width']
-      self._height = params['height']
-      self._global_reference = params['global_reference']
-      self._build_order = params['build_order']
-    except KeyError as e:
-      raise WidgetParamsError(f"Widget initialization failed to find key:{e} in parameters. Parameters: {params}")
+    self.initialize_params()
     #add communication error widget from widget class to
     p_buf = GdkPixbuf.Pixbuf.new_from_file_at_scale('./Public/images/Warning.png', 40, -1, True) #creating communciation error indicator
     self.error_ind = Gtk.Image(pixbuf=p_buf)
     #self.error_ind = None
-    self.expression_err = False    
-    self.styles = [] if not params.get("styles") else params.get("styles")
-    self._widget_class = params.get("widget_class")
-    self.parent = params.get("parent")
-    self._global_reference=(params.get("global_reference") and params["global_reference"])\
-                       or (self.parent and hasattr(self.parent, "global_reference") and self.parent.global_reference)
     
 
     self.widget_ids={} #used to ref IDs to Python classes of children
@@ -168,6 +152,29 @@ class Widget(GObject.Object):
     self.widget.set_property("width_request", self.width)
     self.widget.set_property("height_request", self.height)
 
+  def initialize_params(self):
+    replacements = self.params.get('replacements')
+    if replacements:
+      self.substitute_replacements(replacements, self.params)
+    self.animations = [] if not self.params.get("animations") else self.params.get("animations")
+    self.states = [] if not not self.params.get("states") else self.params.get("states")
+    #private settings
+    try:
+      self._id = self.params['id']
+      self._x= self.params['x']
+      self._y= self.params['y']
+      self._width = self.params['width']
+      self._height = self.params['height']
+      self._global_reference = self.params['global_reference']
+      self._build_order = self.params['build_order']
+    except KeyError as e:
+      raise WidgetParamsError(f"Widget initialization failed to find key:{e} in parameters. Parameters: {self.params}")
+    self.expression_err = False    
+    self.styles = [] if not self.params.get("styles") else self.params.get("styles")
+    self._widget_class = self.params.get("widget_class")
+    self.parent = self.params.get("parent")
+    self._global_reference=(self.params.get("global_reference") and self.params["global_reference"])\
+                       or (self.parent and hasattr(self.parent, "global_reference") and self.parent.global_reference)
 
   def substitute_replacements(self, replacements, params):
     #pass in a dict to replace all strings in replacements
