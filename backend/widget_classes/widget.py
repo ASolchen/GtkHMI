@@ -104,28 +104,44 @@ class Widget(GObject.Object):
   def global_reference(self):
     return self._global_reference
 
-  @GObject.Property(type=bool, default=True, flags=GObject.ParamFlags.READWRITE)
-  def builder_mode(self):
-    return self._builder_mode  
-  @builder_mode.setter
-  def builder_mode(self, value):
-    self._builder_mode = value
-    #TODO do stuff here when builder mode is changed
 
   def __init__(self, factory, params):
     GObject.Object.__init__(self)
+    if not hasattr(self, "widget"): # hasn't been set by custom widget class
+      self.widget = Gtk.Fixed()
+    #private props
+    self._id = params['id'] #read-only
+    self._global_reference = params['global_reference'] #read-only
+    self.parent = params['parent'] #parent widget's layout object. This is what this widget's layout is attached to
+    self._build_order = 0
+    self._x= 0
+    self._y= 0
+    self._width = 100
+    self._height = 100
     self.factory = factory
     self.app = factory.app
     self.params = params.copy()
     self._builder_mode = self.app.builder_mode
-    self.signals = [(self.app, self.app.connect("notify::builder-mode", self.on_app_builder_mode)),]
+    p_buf = GdkPixbuf.Pixbuf.new_from_file_at_scale('./Public/images/Warning.png', 40, -1, True) #creating communciation error indicator
+    self.error_ind = Gtk.Image(pixbuf=p_buf)
+    self.layout = Gtk.Fixed()
+    self.content = Gtk.Overlay()
+    self.layout.put(self.content, 0,0)
+    self.builder_mask = Gtk.EventBox(above_child=True)
+    colors = [Gdk.RGBA(1.0, 0.0, 0.0, 0.2),
+              Gdk.RGBA(0.0, 1.0, 0.0, 0.2),
+              Gdk.RGBA(0.0, 0.0, 1.0, 0.2),
+              Gdk.RGBA(1.0, 1.0, 1.0, 0.2),
+              Gdk.RGBA(1.0, 0.0, 1.0, 0.2)]
+    self.builder_mask.override_background_color(Gtk.StateFlags.NORMAL, colors[params['id']-1])
+    self.builder_mask.connect("button-release-event", self.mouse_up)
+    self.content.add(self.widget)
+    self.signals = [(self.app, self.app.connect("notify::builder-mode", self.initialize_params)),]
     self.connection_manager = factory.app.connection_manager
     self.db_session = factory.project_db.session
     self.tag_ids = {} #TODO < see if this is used
     self.initialize_params()
     #add communication error widget from widget class to
-    p_buf = GdkPixbuf.Pixbuf.new_from_file_at_scale('./Public/images/Warning.png', 40, -1, True) #creating communciation error indicator
-    self.error_ind = Gtk.Image(pixbuf=p_buf)
     #self.error_ind = None
     
 
@@ -142,39 +158,54 @@ class Widget(GObject.Object):
   def __str__(self):
     return f'GTK HMI {self.__class__.__name__}: {self.id}'
 
-  def on_app_builder_mode(self, app, signal):
-    self.builder_mode = app.builder_mode 
-
   def move(self):
-    self.parent.move(self.widget, self.x, self.y)
+    if self.layout in self.parent.get_children():
+      self.parent.move(self.layout, self.x, self.y)
   
   def resize(self):
-    self.widget.set_property("width_request", self.width)
-    self.widget.set_property("height_request", self.height)
+    self.content.set_property("width_request", self.width)
+    self.content.set_property("height_request", self.height)
 
-  def initialize_params(self):
-    replacements = self.params.get('replacements')
-    if replacements:
-      self.substitute_replacements(replacements, self.params)
-    self.animations = [] if not self.params.get("animations") else self.params.get("animations")
-    self.states = [] if not not self.params.get("states") else self.params.get("states")
+  def mouse_up(self, e_box, event):
+    if event.button == 1:
+      print(f"{self} left-click")  
+    if event.button == 3:
+      print(f"{self} right-click")  
+
+
+  def initialize_params(self, *args):
+    self.animations = []
+    self.states = []
+    #self.builder_mask.set_property("visible", self.app.builder_mode)
+    if not self.app.builder_mode:
+      if self.builder_mask in self.content.get_children():
+        self.content.remove(self.builder_mask)
+      replacements = self.params.get('replacements')
+      if replacements:
+        self.substitute_replacements(replacements, self.params)
+      self.animations = [] if not self.params.get("animations") else self.params.get("animations")
+      self.states = [] if not not self.params.get("states") else self.params.get("states")
+      # subscribe to tags here
+    else:
+      self.error_ind.set_property('visible', False)
+      if not self.builder_mask in self.content.get_children():
+        self.content.add_overlay(self.builder_mask)
+        self.content.show_all()
     #private settings
     try:
-      self._id = self.params['id']
-      self._x= self.params['x']
-      self._y= self.params['y']
-      self._width = self.params['width']
-      self._height = self.params['height']
-      self._global_reference = self.params['global_reference']
-      self._build_order = self.params['build_order']
+      self.x= self.params['x']
+      self.y= self.params['y']
+      self.width = self.params['width']
+      self.height = self.params['height']
+      self.build_order = 0 if self.params['build_order']==None else self.params['build_order']
     except KeyError as e:
       raise WidgetParamsError(f"Widget initialization failed to find key:{e} in parameters. Parameters: {self.params}")
     self.expression_err = False    
     self.styles = [] if not self.params.get("styles") else self.params.get("styles")
     self._widget_class = self.params.get("widget_class")
-    self.parent = self.params.get("parent")
     self._global_reference=(self.params.get("global_reference") and self.params["global_reference"])\
                        or (self.parent and hasattr(self.parent, "global_reference") and self.parent.global_reference)
+    self.layout.show_all()
 
   def substitute_replacements(self, replacements, params):
     #pass in a dict to replace all strings in replacements
@@ -216,7 +247,7 @@ class Widget(GObject.Object):
 
   def animate(self, anim_type, val):
     #lookup animations
-    if self.builder_mode:
+    if self.app.builder_mode:
       return
     if anim_type=="STATE":
       self.animate_state(val)
@@ -230,12 +261,12 @@ class Widget(GObject.Object):
     if anim_type=="Y":
       self.y = val
     if anim_type=="VIS":
-      self.widget.set_property("visible", bool(val))
+      self.layout.set_property("visible", bool(val))
     if anim_type=="ENBL":
-      self.widget.set_property("sensitive", bool(val))
+      self.layout.set_property("sensitive", bool(val))
     
   def animate_state(self, val):
-    if self.builder_mode:
+    if self.app.builder_mode:
       return
     #override this in child classes if needed
     for state in self.states:
@@ -263,20 +294,18 @@ class Widget(GObject.Object):
 
   def add_error_ind(self):
     #add communication / expression error to each widget if it exists
-    if self.builder_mode:
+    if self.app.builder_mode:
       return
     self.parent.put(self.error_ind,self.x,self.y)
 
   def attach_to_parent(self):
-    if not hasattr(self, "widget"): # hasn't been set by custom widget class
-      self.widget = Gtk.Fixed()
     if not self.widget_class: # base class, add style box
       style_box = Gtk.Box(width_request=self.width, height_request=self.height)
       sc = style_box.get_style_context()
       for style in self.styles:
         sc.add_class(style)
-      self.widget.put(style_box, 0,0)
-    self.parent.put(self.widget, self.x, self.y)
+      self.layout.put(style_box, 0,0)
+    self.parent.put(self.layout, self.x, self.y)
     self.add_error_ind()
     self.error_ind.set_property('visible',False)
 
@@ -315,7 +344,7 @@ class Widget(GObject.Object):
           else:
             params.update(w_type.get_params_from_orm(class_res))
         if w_type:
-          params["parent"] = self.widget
+          params["parent"] = self.layout
           self.widget_ids[params["id"]] = self.factory.create_widget(w_type, params)
 
   def get_widget_by_id(self, id_string):
@@ -332,7 +361,7 @@ class Widget(GObject.Object):
 
   def update(self, factory, subscriber):
     self.expression_err = False #reset and recheck for error
-    if self.builder_mode:
+    if self.app.builder_mode:
       return
     #run aninimations for base widgets
     base_animations = {"Visibility": None, "Enable": None, "PositionX": None, "PositionY": None, "State":None}
@@ -365,11 +394,11 @@ class Widget(GObject.Object):
     self.factory.db_manager.add_subscription(tags)
 
   def add_style(self, style):
-    sc = self.widget.get_style_context()
+    sc = self.layout.get_style_context()
     sc.add_class(style)
 
   def remove_style(self, style):
-    sc = self.widget.get_style_context()
+    sc = self.layout.get_style_context()
     sc.remove_class(style)
   
   def write(self, tag, val):

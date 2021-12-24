@@ -50,19 +50,17 @@ class DisplayWidget(Widget):
     self.pollrate = params.get("pollrate")
     self.startup_script = params.get("on_startup")
     self.shutdown_script = params.get("on_shutdown")
-    self.widget.set_property("width_request", self.width)
-    self.widget.set_property("height_request", self.height)
     self.polling = True
     self.startup()
 
   def update_tags(self):
-    if self.builder_mode:
+    if self.app.builder_mode:
       return
     self.connection_manager.emit("tag_update", self.id) #just let widgets know to update
     return self.polling
 
   def startup(self):
-    if self.builder_mode:
+    if self.app.builder_mode:
       return
     return
     self.db_manager.clear_tag_subs(self.id)
@@ -71,7 +69,7 @@ class DisplayWidget(Widget):
       exec(self.startup_script)
   
   def shutdown(self):
-    if self.builder_mode:
+    if self.app.builder_mode:
       return
     self.polling = False
     self.db_manager.clear_tag_subs(self.id)

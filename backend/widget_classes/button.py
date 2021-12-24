@@ -110,6 +110,8 @@ class ButtonWidget(Widget):
 
   def animate_state(self, val):
     #override this in child classes if needed
+    if self.app.builder_mode:
+      return
     for state in self.states:
       sc = self.widget.get_style_context()
       if type(val) != type(None): val = int(val)
@@ -148,3 +150,4 @@ class ButtonWidget(Widget):
 
   def on_release_callback(self):
     exec(self.on_release)
+    self.width += 100
