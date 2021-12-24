@@ -48,6 +48,27 @@ class BuilderLayout(Gtk.Box):
     self.widget_clicked = None
     self.active_display = None  #Keeps track of which display is being edited
     self.click_panel = None
+    self.selected_widgets = {}
+
+  def append_selected(self, widget):
+    self.selected_widgets[widget.id] = widget
+    widget.builder_mask.select()
+    self.update_settings_panel(None)
+  
+  def new_selected(self, widget):
+    for w in self.selected_widgets:
+      self.selected_widgets[w].builder_mask.deselect()
+    self.selected_widgets= {widget.id: widget} #single one
+    widget.builder_mask.select()
+    self.update_settings_panel(widget)
+
+  def none_selected(self):
+    for w in self.selected_widgets:
+      self.selected_widgets[w].builder_mask.deselect()
+    self.selected_widgets= {}
+    self.update_settings_panel(None)
+
+
 
   def build_interface(self):
     #try:
@@ -226,47 +247,27 @@ class BuilderLayout(Gtk.Box):
     self.add_widget_highlight(w_id)
     self.update_settings_panel(w_id)
     self.build_panel.show_all()
-  
-  def add_click_panel(self,w_id,*args):
-    return
-    if self.click_panel != None:
-      self.hmi_layout.remove(self.click_panel)
-    x,y,w,h = self.get_widgets_rectangle(w_id)
-    self.click_panel = Gtk.EventBox(name=w_id, width_request=w+8,height_request=h+8)
-    self.click_panel.connect("button_release_event",self.build_panel_clicked)
-    sc = self.click_panel.get_style_context()
-    sc.add_class("builder-see-through")
-    self.hmi_layout.put(self.click_panel, x-2, y-2)
-    self.build_panel.show_all()
 
-  def add_widget_highlight(self,w_id,*args):
-    if self.widget_highlighted != None:
-      #Remove last widget highlighted first
-      sc = self.widget_highlighted.get_style_context()
-      sc.remove_class("builder-highlight")
-    x,y,w,h = self.get_widgets_rectangle(w_id)
-    x = int(self.global_coordinates['abs_x'])
-    y = int(self.global_coordinates['abs_y'])
-    #print('wid',w_id,x,y,self.global_coordinates['abs_x'],self.global_coordinates['abs_y'])
-    highlight_box = Gtk.Box(width_request=w+8, height_request=h+8)
-    sc = highlight_box.get_style_context()
-    sc.add_class("builder-highlight")
-    self.hmi_layout.put(highlight_box, x-2, y-2)
-    self.build_panel.show_all()
-    self.widget_highlighted = highlight_box
-
-  def update_settings_panel(self,w_id,*args):
+  def update_settings_panel(self, widget,*args):
     #Building settings panel
     for c in self.settings_panel.get_children():
       self.settings_panel.remove(c)
-    rows = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ID", w_id)
-    if len(rows):
+    if len(self.selected_widgets) == 0:
+      self.settings_panel.add(Gtk.Label(label="No Widgets Selected"))
+      self.settings_panel.show_all()
+      return
+    if widget:
       nb = Gtk.Notebook()
       self.settings_panel.add(nb)
-      row = rows[0]
-      nb.append_page(BuilderToolsWidget(self, row), Gtk.Label(label="Basic"))
-      nb.append_page(Gtk.Box(), Gtk.Label(label="Advanced"))
+      #nb.append_page(BuilderToolsWidget(self, row), Gtk.Label(label="Basic"))
+      nb.append_page(Gtk.Box(), Gtk.Label(label=f"{widget.id} Basic"))
+      nb.append_page(Gtk.Box(), Gtk.Label(label=f"{widget.id} Advanced"))
       self.settings_panel.show_all()
+      return
+    self.settings_panel.add(Gtk.Label(label="Multiple Widgets Selected"))
+    self.settings_panel.show_all()
+
+      
   
   def open_widget_popup(self, button):
     popup = WidgetSettingsPopup(self, self, self.db_manager, button.get_property("name"))

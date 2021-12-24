@@ -33,6 +33,7 @@ import re
 import time
 
 from backend.exceptions import GtkHmiError, WidgetParamsError
+from builder.build_mask import BuildMask
 from backend.managers.database_models.widget_database import WidgetParams
 from gi.repository import Gdk, GdkPixbuf, GObject, Gtk
 
@@ -122,21 +123,16 @@ class Widget(GObject.Object):
     self.app = factory.app
     self.params = params.copy()
     self._builder_mode = self.app.builder_mode
-    p_buf = GdkPixbuf.Pixbuf.new_from_file_at_scale('./Public/images/Warning.png', 40, -1, True) #creating communciation error indicator
-    self.error_ind = Gtk.Image(pixbuf=p_buf)
     self.layout = Gtk.Fixed()
+    p_buf = GdkPixbuf.Pixbuf.new_from_file_at_scale('./Public/images/Warning.png', 40, -1, True) #creating communciation error indicator
+    self.error_ind = Gtk.Image(pixbuf=p_buf, visible=False)
     self.content = Gtk.Overlay()
     self.layout.put(self.content, 0,0)
-    self.builder_mask = Gtk.EventBox(above_child=True)
-    colors = [Gdk.RGBA(1.0, 0.0, 0.0, 0.2),
-              Gdk.RGBA(0.0, 1.0, 0.0, 0.2),
-              Gdk.RGBA(0.0, 0.0, 1.0, 0.2),
-              Gdk.RGBA(1.0, 1.0, 1.0, 0.2),
-              Gdk.RGBA(1.0, 0.0, 1.0, 0.2)]
-    self.builder_mask.override_background_color(Gtk.StateFlags.NORMAL, colors[params['id']-1])
-    self.builder_mask.connect("button-release-event", self.mouse_up)
+    self.layout.put(self.error_ind,0,0) # put above content
+    self.builder_mask = BuildMask(self)
     self.content.add(self.widget)
-    self.signals = [(self.app, self.app.connect("notify::builder-mode", self.initialize_params)),]
+    self.signals = [(self.app, self.app.connect("notify::builder-mode", self.initialize_params)),
+                    (self.app, self.app.connect("notify::builder-mode", self.builder_mask.build_mode_changed)),]
     self.connection_manager = factory.app.connection_manager
     self.db_session = factory.project_db.session
     self.tag_ids = {} #TODO < see if this is used
@@ -166,13 +162,6 @@ class Widget(GObject.Object):
     self.content.set_property("width_request", self.width)
     self.content.set_property("height_request", self.height)
 
-  def mouse_up(self, e_box, event):
-    if event.button == 1:
-      print(f"{self} left-click")  
-    if event.button == 3:
-      print(f"{self} right-click")  
-
-
   def initialize_params(self, *args):
     self.animations = []
     self.states = []
@@ -187,10 +176,11 @@ class Widget(GObject.Object):
       self.states = [] if not not self.params.get("states") else self.params.get("states")
       # subscribe to tags here
     else:
-      self.error_ind.set_property('visible', False)
       if not self.builder_mask in self.content.get_children():
         self.content.add_overlay(self.builder_mask)
         self.content.show_all()
+      if self.error_ind in self.layout.get_children():
+        self.layout.remove(self.error_ind)
     #private settings
     try:
       self.x= self.params['x']
@@ -292,11 +282,8 @@ class Widget(GObject.Object):
       #If no styles used, apply default class style
       sc.add_class(self.widget_class)
 
-  def add_error_ind(self):
-    #add communication / expression error to each widget if it exists
-    if self.app.builder_mode:
-      return
-    self.parent.put(self.error_ind,self.x,self.y)
+
+    
 
   def attach_to_parent(self):
     if not self.widget_class: # base class, add style box
@@ -306,8 +293,6 @@ class Widget(GObject.Object):
         sc.add_class(style)
       self.layout.put(style_box, 0,0)
     self.parent.put(self.layout, self.x, self.y)
-    self.add_error_ind()
-    self.error_ind.set_property('visible',False)
 
   def build_children(self): #from the database
     params = {}
@@ -385,7 +370,10 @@ class Widget(GObject.Object):
       self.animate("STATE", self.connection_manager.evaluate_expression(self, base_animations["State"], self.display, return_type="INT"))
     if visible:
       self.class_update(factory, subscriber)
-    self.error_ind.set_property('visible', self.expression_err)
+    if self.expression_err and not self.error_ind in self.layout.get_children():
+        self.layout.put(self.error_ind,0,0)
+    if not self.expression_err and self.error_ind in self.layout.get_children():
+        self.layout.remove(self.error_ind)
 
   def class_update(self, factory, subscriber):
     pass

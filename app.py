@@ -62,7 +62,7 @@ class App(GObject.Object):
     self.root = root
     root.connect("key-press-event", self.on_key_press_event)
     self._builder_mode = not len(db)
-    self.auto_refresh = False
+    self.auto_refresdbh = False
     with open("Public/app_settings.json", "r") as fp:
       self.app_settings = json.load(fp)    
     #settings.set_property("set_decorate",False)
@@ -90,24 +90,21 @@ class App(GObject.Object):
   def build(self):
     parent = self.hmi_layout.get_parent()
     if parent:
-        parent.remove(self.hmi_layout)
-    for c in self.root.get_children():
-      c.destroy()
+        parent.remove(self.hmi_layout) #hang onto the hmi_layout
+    for c in self.root.get_children(): # delete the rest
+      c.destroy()                     
     self.root.resize(100, 100) # make is small and let widgets expand it
     if self.builder_mode:
-      bl = BuilderLayout(self)
-      self.root.add(bl)
+      self.builder = BuilderLayout(self)
+      self.root.add(self.builder)
       self.root.set_decorated(True)
       self.root.set_has_resize_grip(True)
     else:
+      self.builder = None
       self.root.set_decorated(False)
       self.root.set_has_resize_grip(False)
       self.root.add(self.hmi_layout)
     self.root.show_all()
-    
-
-  def build_builder_layout(self):
-    pass
   
   def add_style(self, path):
     #try:

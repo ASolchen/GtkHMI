@@ -150,4 +150,4 @@ class ButtonWidget(Widget):
 
   def on_release_callback(self):
     exec(self.on_release)
-    self.width += 100
+    self.x += 100
