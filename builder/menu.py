@@ -178,10 +178,16 @@ class Menu(Gtk.MenuBar):
       self.append(help_menu_dropdown)
 
   def confirm_open_db(self, *args):
-    self.builder.confirm(self.builder.open_database_req, "Close current project and open another?") 
+    if len(self.app.db):
+      self.builder.confirm(self.builder.open_database_req, "Close current project and open another?") 
+    else:
+      self.builder.open_database_req()
 
   def confirm_create_db(self, *args):
-    self.builder.confirm(self.builder.create_database_req, "Close current project and create new?") 
+    if len(self.app.db):
+      self.builder.confirm(self.builder.create_database_req, "Close current project and create new?")
+    else:
+      self.builder.create_database_req()
 
 
         
