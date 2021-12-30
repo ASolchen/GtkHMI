@@ -5,7 +5,7 @@ import json
 from popups.popup import PopupConfirm, PopupMsg, ValueEnter, Keyboard, SaveFile, OpenFile
 from backend.widget_classes.factory import WidgetFactory, WIDGET_TYPES
 
-from backend.widget_classes.widget import Widget
+from backend.widget_classes.widget import Widget, WidgetSettingsBase
 from backend.widget_classes.numeric_display import NumericDisplayWidget
 from backend.widget_classes.string_display import StringDisplayWidget
 from backend.widget_classes.display import DisplayWidget, PopupDisplayWidget
@@ -49,6 +49,20 @@ class BuilderLayout(Gtk.Box):
     self.active_display = None  #Keeps track of which display is being edited
     self.click_panel = None
     self.selected_widgets = {}
+    self.clipboard = {"widgets": {}}
+
+  def on_key_press_event(self, window, event):
+      if event.keyval == 99: #ctrl-c
+        self.clipboard["widgets"] = self.selected_widgets.copy()
+        print(self.clipboard)
+      if event.keyval == 118 and len(self.clipboard): #ctrl-v:
+        for w in self.clipboard["widgets"]:
+          params = self.clipboard["widgets"][w].params.copy()
+          params['id'] = 9999999999
+          params['x'] += 10
+          params['y'] += 10
+          self.app.widget_factory.create_widget(params)
+
 
   def append_selected(self, widget):
     self.selected_widgets[widget.id] = widget
@@ -86,20 +100,14 @@ class BuilderLayout(Gtk.Box):
     scroll.add(self.settings_panel)
     left_bottom_frame.add(scroll)
 
-    self.conn_button = Gtk.Button(width_request = 40)
+    self.conn_button = Gtk.Button(width_request = 40, label="Connections")
     self.conn_button.connect('clicked',self.setup_connection)
     self.conn_button.set_sensitive(False)
-    p_buf = GdkPixbuf.Pixbuf.new_from_file_at_scale('./Public/images/Connection.png', 40, -1, True)
-    image = Gtk.Image(pixbuf=p_buf)
-    self.conn_button.add(image)
     self.nav_button_bar.add(self.conn_button)
 
-    self.tag_button = Gtk.Button(width_request = 40)
+    self.tag_button = Gtk.Button(width_request = 40, label="Tags")
     self.tag_button.connect('clicked',self.setup_tags,None)
     self.tag_button.set_sensitive(False)
-    p_buf = GdkPixbuf.Pixbuf.new_from_file_at_scale('./Public/images/Tag.png', 40, -1, True)
-    image = Gtk.Image(pixbuf=p_buf)
-    self.tag_button.add(image)
     self.nav_button_bar.add(self.tag_button)
 
     right_frame = Gtk.Frame()
@@ -129,125 +137,6 @@ class BuilderLayout(Gtk.Box):
     self.navigator_panel.pack_start(WidgetExplorer(self),1,1,2)
 
   
-  def build_panel_clicked(self,widget,event,*args):
-    widget_found = False
-
-    #######################Could put base panel click with item click on top so have two connects and one override the other if click in smaller location
-    #######################double click to go down
-    #######################tree view would have check marks to make visible
-    #######################treeveiw popover would have edit and add widget if it is a group, otherwise just edit for highlighted'upda widget
-    if event.button == 1:
-      #Left Click
-      if self.active_display == None:
-        return
-      if self.widget_clicked != None:
-        if self.global_reference != None:
-          display_rows = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ParentID", self.global_reference)
-        else:
-          display_rows = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ParentID", self.widget_clicked)
-      else:
-        display_rows = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ParentID", self.active_display)
-      #keeps track of upper left hand corner of widget clicked on so that groups of widgets can be selected
-      absolute_x = event.x - self.global_coordinates['abs_x']
-      absolute_y = event.y - self.global_coordinates['abs_y']
-      if (self.global_coordinates['x'] <= event.x <= (self.global_coordinates['x']+self.global_coordinates['width'])) and (self.global_coordinates['y'] <= event.y <= (self.global_coordinates['height']+self.global_coordinates['y'])):
-        #if user has group selected and then clicks within group but not on a new widget within the group.  Prevents the group from being de-selected
-        widget_found = True
-      elif (self.global_coordinates['x'] >= absolute_x or absolute_x >= (self.global_coordinates['x']+self.global_coordinates['width'])) or (self.global_coordinates['y'] >= absolute_y or absolute_y >= (self.global_coordinates['height']+self.global_coordinates['y'])):
-        #user clicked outside current widget selected so now research active panel to see if new widget was clicked or de-selected widget
-        if self.widget_clicked != None:
-          self.global_reference = None
-          self.widget_clicked = None
-          self.global_coordinates = {'x':0,'y':0,'width':0,'height':0,'abs_x':0,'abs_y':0}
-          absolute_x = event.x
-          absolute_y = event.y
-          display_rows = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ParentID", self.active_display)
-
-      if len(display_rows) == 0:
-        if (self.global_coordinates['x'] <= absolute_x <= (self.global_coordinates['x']+self.global_coordinates['width'])) and (self.global_coordinates['y'] <= absolute_y <= (self.global_coordinates['height']+self.global_coordinates['y'])):
-          #User clicked on same widget but it is the base widget
-          widget_found = True
-
-      else:
-        for dr in range(len(display_rows)):
-          #print('length=',len(display_rows),display_rows[dr]['ID'],display_rows[dr]['X'],absolute_x,display_rows[dr]['Width'],display_rows[dr]['Y'],absolute_y,display_rows[dr]['Height'])
-          if (display_rows[dr]['X'] <= absolute_x <= (display_rows[dr]['X']+display_rows[dr]['Width'])) and (display_rows[dr]['Y'] <= absolute_y <= (display_rows[dr]['Height']+display_rows[dr]['Y'])):
-            #Found item that user clicked on
-            if display_rows[dr]['GlobalReference'] != None and display_rows[dr]['GlobalReference'] != '':
-              #if the item selected has a global reference ('Group') then search within group
-              self.global_reference = display_rows[dr]['GlobalReference']
-            else:
-              self.global_reference = None
-            widget_found = display_rows[dr]['ID']
-            self.widget_clicked = display_rows[dr]['ID']
-            self.global_coordinates['x'] = display_rows[dr]['X']
-            self.global_coordinates['y'] = display_rows[dr]['Y']
-            self.global_coordinates['width'] = display_rows[dr]['Width']
-            self.global_coordinates['height'] = display_rows[dr]['Height']
-            self.global_coordinates['abs_x'] = self.global_coordinates['abs_x'] + display_rows[dr]['X']
-            self.global_coordinates['abs_y'] = self.global_coordinates['abs_y'] + display_rows[dr]['Y']
-            self.add_widget_highlight(self.widget_clicked)
-            self.update_settings_panel(self.widget_clicked)
-            break
-      if not widget_found:
-        #widget not found within group selected or where user clicked
-        self.global_reference = None
-        self.widget_clicked = None
-        self.global_coordinates = {'x':0,'y':0,'width':0,'height':0,'abs_x':0,'abs_y':0}
-        self.add_widget_highlight(self.active_display)
-        self.update_settings_panel(self.active_display)
-    elif event.button == 3: #right click
-      rect = Gdk.Rectangle()
-      rect.x = event.x
-      rect.y = event.y + 10
-      rect.width = rect.height = 1
-      popover = Gtk.Popover(width_request = 200)
-      vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-      edit_btn = Gtk.ModelButton(label="Properties", name=self.widget_clicked)
-      cb = lambda btn: self.open_widget_popup(btn)
-      edit_btn.connect("clicked", cb)
-      vbox.pack_start(edit_btn, False, True, 10)
-      popover.add(vbox)
-      popover.set_position(Gtk.PositionType.RIGHT)
-      popover.set_relative_to(self.hmi_layout)
-      popover.set_pointing_to(rect)
-      popover.show_all()
-      sc = popover.get_style_context()
-      sc.add_class('popover-bg')
-      sc.add_class('font-16')
-
-
-  def refresh_panel(self,w_id,p_id,*args):
-    return # for now
-    #w_id = which widget was selected
-    #p_id = which panel is currently being displayed
-    if w_id == None:
-      self.global_coordinates = {'x':0,'y':0,'width':0,'height':0,'abs_x':0,'abs_y':0}  #refresh widget global coordinates
-    g_displays = 0
-    for c in self.build_panel.get_children():
-      self.build_panel.remove(c)
-    for c in self.hmi_layout.get_children():
-      self.hmi_layout.remove(c)
-    self.build_panel.add(self.hmi_layout)
-    params = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ID", p_id)[0]
-    if params["ParentID"] == "GLOBAL":
-      g_displays +=1
-      d_name = u'GLOBAL_DISPLAY_{}'.format(g_displays)
-      params["Display"] = d_name
-      if not params["Class"] or not len(params["Class"]):
-        w_class = Widget
-      else:
-        w_class = WIDGET_TYPES[params["Class"]]
-      w_class(self.factory, self.hmi_layout, params)
-      pass # make generic display and add global to it
-    else:
-      params["Display"] = params["ID"] #display is its own parent
-      self.display = DisplayWidget(self.factory, self.hmi_layout, params, replacements=[])
-    self.add_click_panel(self.active_display)
-    self.add_widget_highlight(w_id)
-    self.update_settings_panel(w_id)
-    self.build_panel.show_all()
-
   def update_settings_panel(self, widget,*args):
     #Building settings panel
     for c in self.settings_panel.get_children():
@@ -258,10 +147,7 @@ class BuilderLayout(Gtk.Box):
       return
     if widget:
       nb = Gtk.Notebook()
-      self.settings_panel.add(nb)
-      #nb.append_page(BuilderToolsWidget(self, row), Gtk.Label(label="Basic"))
-      nb.append_page(Gtk.Box(), Gtk.Label(label=f"{widget.id} Basic"))
-      nb.append_page(Gtk.Box(), Gtk.Label(label=f"{widget.id} Advanced"))
+      self.settings_panel.add(widget.get_settings_panels()(widget))
       self.settings_panel.show_all()
       return
     self.settings_panel.add(Gtk.Label(label="Multiple Widgets Selected"))

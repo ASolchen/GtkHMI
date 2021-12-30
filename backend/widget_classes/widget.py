@@ -37,8 +37,113 @@ from builder.build_mask import BuildMask
 from backend.managers.database_models.widget_database import WidgetParams
 from gi.repository import Gdk, GdkPixbuf, GObject, Gtk
 
+class WidgetSettingsBase(Gtk.Notebook):
+  def __init__(self, widget) -> None:
+    super().__init__()
+    self.hmi_widget = widget
+    self.build_base_settings_panel()
+    self.set_to_widget_vals()
+
+  def build_base_settings_panel(self):
+    base_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+    self.append_page(base_panel, Gtk.Label(label="Basic Settings"))
+    grid = Gtk.Grid(column_spacing=4, row_spacing=4)
+    base_panel.add(grid)
+    #row 1
+    row = 0
+    grid.attach(Gtk.Label("id", width_request=50), 0, row, 1, 1)
+    self.id_entry = Gtk.Entry(text=self.hmi_widget.id, sensitive=False)
+    grid.attach(self.id_entry, 1,row, 3,1)
+    #row2
+    row+=1
+    grid.attach(Gtk.Label("class", width_request=50), 0, row, 1,1)
+    self.class_label = Gtk.Entry(text=self.hmi_widget.widget_class, sensitive=False)
+    grid.attach(self.class_label, 1,row, 3,1)
+    #row 3
+    row+=1
+    grid.attach(Gtk.Label("description", width_request=50), 0,row, 1,1)
+    self.description_entry = Gtk.Entry()
+    buffer = self.description_entry.get_property("buffer")
+    buffer.connect("deleted-text", lambda buf,pos,n_chars: self.set_param("description",  buf.get_property("text")))
+    buffer.connect("inserted-text", lambda buf,pos, chars, n_chars:self.set_param("description",  buf.get_property("text")))
+    grid.attach(self.description_entry, 1,row, 3,1)
+    #row 4
+    row+=1
+    grid.attach(Gtk.Label("x", width_request=50), 0, row, 1,1)
+    self.x_spin = Gtk.SpinButton(adjustment=Gtk.Adjustment(0, 0, 5000, 1, 10, 0), numeric=True, width_request=150)    
+    self.x_spin.connect("notify::value", lambda spin, val: self.set_param("x",  int(self.x_spin.get_property("value"))))
+    grid.attach(self.x_spin, 1,row, 1,1)
+    
+    grid.attach(Gtk.Label("y", width_request=50), 2,row, 1,1)
+    self.y_spin = Gtk.SpinButton(adjustment=Gtk.Adjustment(0, 0, 5000, 1, 10, 0), numeric=True, width_request=150)
+    self.y_spin.connect("notify::value", lambda spin, val: self.set_param("y",  int(self.y_spin.get_property("value"))))
+    grid.attach(self.y_spin, 3,row, 1,1)
+    #row 5
+    row+=1    
+    grid.attach(Gtk.Label("width", width_request=50), 0, row, 1, 1)
+    self.width_spin = Gtk.SpinButton(adjustment=Gtk.Adjustment(0, 1, 5000, 1, 10, 0), numeric=True, width_request=150)
+    self.width_spin.connect("notify::value", lambda spin, val: self.set_param("width",  int(self.width_spin.get_property("value"))))
+    grid.attach(self.width_spin, 1, row, 1, 1)
+    
+    grid.attach(Gtk.Label("height", width_request=50), 2, row, 1, 1)
+    self.height_spin = Gtk.SpinButton(adjustment=Gtk.Adjustment(0, 1, 5000, 1, 10, 0), numeric=True, width_request=150)
+    self.height_spin.connect("notify::value", lambda spin, val: self.set_param("height",  int(self.height_spin.get_property("value"))))
+    grid.attach(self.height_spin, 3, row, 1, 1)
+    #row 6
+    # row+=1
+    # grid.attach(Gtk.Label("Styles"), 0, row, 1, 1)
+    # db_row["Styles"] = db_row["Styles"] if db_row["Styles"] else ""
+    # self.style_entry = Gtk.Entry(text=db_row["Styles"])
+    # grid.attach(self.style_entry, 1, row, 3, 1)
+    #row 7
+    row+=1
+    grid.attach(Gtk.Label("parent_id"), 0, row, 1, 1)
+    self.parent_entry = Gtk.Entry(text=self.hmi_widget.parent_id, sensitive=False)
+    grid.attach(self.parent_entry, 1, row, 3, 1)
+    #row 8
+    row+=1 
+    grid.attach(Gtk.Label("global_reference"), 0, row, 1, 1)
+    self.global_ref_entry = Gtk.Entry(text=self.hmi_widget.global_reference, sensitive=False)
+    grid.attach(self.global_ref_entry, 1, row, 3, 1)
+    #row 9
+    row+=1
+    grid.attach(Gtk.Label("build_order", width_request=50), 0, row, 1, 1)
+    self.build_order_spin = Gtk.SpinButton(adjustment=Gtk.Adjustment(0, 0, 5000, 1, 10, 0), numeric=True, width_request=150)
+    grid.attach(self.build_order_spin, 1, row, 1, 1)
+    self.build_order_spin.connect("notify::value", lambda spin, val: self.set_param("build_order",  int(self.build_order_spin.get_property("value"))))
+    grid.attach(Gtk.Label("(Zero means ignore)"), 2, row, 2, 1)
+    #row 10
+    row+=1
+    btn = Gtk.Button("Save")
+    #btn.connect("clicked", self.get_params)
+    grid.attach(btn, 0, row, 1, 1)
+    self.debug_area = Gtk.TextView(height_request=100, width_request=300)
+    self.debug_area.set_wrap_mode(Gtk.WrapMode.WORD)
+    grid.attach(self.debug_area, 1, row, 3, 3)
+
+
+  def set_to_widget_vals(self):
+    self.description_entry.set_text(self.hmi_widget.description)
+    self.x_spin.set_value(self.hmi_widget.x)
+    self.y_spin.set_value(self.hmi_widget.y)
+    self.width_spin.set_value(self.hmi_widget.width)
+    self.height_spin.set_value(self.hmi_widget.height)
+    self.build_order_spin.set_value(self.hmi_widget.build_order)
+
+
+  def set_param(self, param, val):
+    if hasattr(self.hmi_widget, param):
+      setattr(self.hmi_widget, param, val)
+
+
+
 
 class Widget(GObject.Object):
+
+  @classmethod
+  def get_settings_panels(cls):
+    return WidgetSettingsBase
+
   orm_model = WidgetParams
   @classmethod
   def get_params_from_orm(cls, result):
@@ -51,6 +156,7 @@ class Widget(GObject.Object):
     "id": result.id,
     "x": result.x,
     "y": result.y,
+    "description": result.description,
     "width": result.width,
     "height": result.height,
     "widget_class": result.widget_class,
@@ -62,7 +168,19 @@ class Widget(GObject.Object):
 
   @GObject.Property(type=int, flags=GObject.ParamFlags.READABLE)
   def id(self):
-    return self._id 
+    return self._id
+  
+  @GObject.Property(type=int, flags=GObject.ParamFlags.READABLE)
+  def parent_id(self):
+    return self._parent_id
+
+  @GObject.Property(type=str, flags=GObject.ParamFlags.READWRITE)
+  def description(self):
+    return self._description 
+  @description.setter
+  def description(self, value):
+    self._description = value
+    
   @GObject.Property(type=int, flags=GObject.ParamFlags.READWRITE)
   def x(self):
     return self._x  
@@ -113,12 +231,14 @@ class Widget(GObject.Object):
     #private props
     self._id = params['id'] #read-only
     self._global_reference = params['global_reference'] #read-only
+    self._parent_id = params['parent_id']
     self.parent = params['parent'] #parent widget's layout object. This is what this widget's layout is attached to
     self._build_order = 0
     self._x= 0
     self._y= 0
     self._width = 100
     self._height = 100
+    self._description = '' if params['description'] == None else params['description']
     self.factory = factory
     self.app = factory.app
     self.params = params.copy()
@@ -286,12 +406,6 @@ class Widget(GObject.Object):
     
 
   def attach_to_parent(self):
-    if not self.widget_class: # base class, add style box
-      style_box = Gtk.Box(width_request=self.width, height_request=self.height)
-      sc = style_box.get_style_context()
-      for style in self.styles:
-        sc.add_class(style)
-      self.layout.put(style_box, 0,0)
     self.parent.put(self.layout, self.x, self.y)
 
   def build_children(self): #from the database
@@ -330,7 +444,7 @@ class Widget(GObject.Object):
             params.update(w_type.get_params_from_orm(class_res))
         if w_type:
           params["parent"] = self.layout
-          self.widget_ids[params["id"]] = self.factory.create_widget(w_type, params)
+          self.widget_ids[params["id"]] = self.factory.create_widget(params)
 
   def get_widget_by_id(self, id_string):
     if id_string == self.id:

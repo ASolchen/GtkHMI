@@ -52,6 +52,7 @@ class GladeIdMissing(KeyError):
   pass
 
 WIDGET_TYPES = {
+  "base": Widget,
   "ctrl-button": ButtonWidget,
   "num-entry":NumericEntryWidget,      
   "string-entry":StringEntryWidget,
@@ -118,10 +119,11 @@ class WidgetFactory(GObject.Object):
         del(self.displays[display])
       params["parent"] = self.app.hmi_layout
       id = params["id"]
-      self.displays[id] = self.create_widget(DisplayWidget, params)
+      self.displays[id] = self.create_widget(params)
       self.displays[id].widget.show_all()
   
-  def create_widget(self, widget_class, params):
+  def create_widget(self, params):
+    widget_class = WIDGET_TYPES[params['widget_class']]
     #lookup animations, states, replacements
     id = params.get("id")
     if not id:

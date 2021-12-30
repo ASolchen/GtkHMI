@@ -72,13 +72,18 @@ class App(GObject.Object):
     #self.alarm_manager = AlarmEventViewHandler(self)
     self.hmi_layout= Gtk.Fixed() #this is the main layout that displays attach to. If in build mode, this layout is on a scroll
     self.hmi_layout_parent = None # in builder mode the hmi_layout is attached to this, hang on to remove if going back to run mode
+    self.clipboard = {}
     self.build()
     self.db = db
 
   def on_key_press_event(self, window, event):
-    #toggle builder mode using ctrl-b
-    if event.state & Gdk.ModifierType.CONTROL_MASK and event.keyval == 98:
-      self.builder_mode = not self.builder_mode
+    #toggle builder mode using ctrl
+    if event.state & Gdk.ModifierType.CONTROL_MASK:
+      if event.keyval == 98: #ctrl-b
+        self.builder_mode = not self.builder_mode
+      elif self.builder: #in builder mode send key to builder object
+        self.builder.on_key_press_event(window, event)
+
       
 
   @GObject.Signal(flags=GObject.SignalFlags.RUN_LAST, return_type=bool,
