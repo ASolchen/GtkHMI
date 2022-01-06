@@ -60,6 +60,7 @@ class App(GObject.Object):
   def __init__(self, root, db):
     super(App, self).__init__()
     self.root = root
+    root.connect("delete-event", self.app_exit)
     root.connect("key-press-event", self.on_key_press_event)
     self._builder_mode = not len(db)
     self.auto_refresdbh = False
@@ -166,7 +167,7 @@ class App(GObject.Object):
 
 
   def shutdown(self,*args):
-    self.db_manager.clear_tag_subs(next(iter(self.widget_factory.displays)))
+    #self.db_manager.clear_tag_subs(next(iter(self.widget_factory.displays)))
     Gtk.main_quit()
   
   def app_exit(self,*args):

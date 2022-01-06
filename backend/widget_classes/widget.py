@@ -339,7 +339,7 @@ class Widget(GObject.Object):
     """
     disconnects all signals of this widget and all of its children
     removes visual widget and childrens widgets
-    this object cannot delete itself so parent of this also needs to del(this_object)
+    this object cannot delete itself so parent of this also needs to remove and del(this_object)
     e.g.
     self.ids['78'].kill_children()
     del(self.ids['78']) 
@@ -411,14 +411,15 @@ class Widget(GObject.Object):
   def build_children(self): #from the database
     params = {}
     if self.global_reference:
-      #get the child params of the globals children.
-      child_params = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ParentID", self.global_reference, order_by="BuildOrder")
-      for c_params in child_params:
-        c_params["Replacements"] = self.replacements #this is a decendadant of a global, add replacements
-        c_params["Animations"] = self.db_manager.get_rows("WidgetAnimations", ["Type","Expression"], "WidgetID", c_params["ID"])
-        c_params["States"] = self.db_manager.get_rows("WidgetStateIndications", ["State","Caption","Style"], "WidgetID", c_params["ID"])
-        c_params["GlobalReference"] = c_params["ID"]
-        #c_params["ID"] = "{}.{}".format(self.id, c_params["ID"])
+      # #get the child params of the globals children.
+      # child_params = self.db_manager.get_rows("Widgets", Widget.base_parmas, "ParentID", self.global_reference, order_by="BuildOrder")
+      # for c_params in child_params:
+      #   c_params["Replacements"] = self.replacements #this is a decendadant of a global, add replacements
+      #   c_params["Animations"] = self.db_manager.get_rows("WidgetAnimations", ["Type","Expression"], "WidgetID", c_params["ID"])
+      #   c_params["States"] = self.db_manager.get_rows("WidgetStateIndications", ["State","Caption","Style"], "WidgetID", c_params["ID"])
+      #   c_params["GlobalReference"] = c_params["ID"]
+      #   #c_params["ID"] = "{}.{}".format(self.id, c_params["ID"])
+      pass
     else:
       w_type = Widget
       child_ids = self.db_session.query(w_type.orm_model)\

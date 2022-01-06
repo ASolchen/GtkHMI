@@ -84,6 +84,7 @@ class WidgetFactory(GObject.Object):
   def __init__(self, app):
     super(WidgetFactory, self).__init__()
     self.app = app
+    self.widgets = {}
     self.project_db = app.db_manager.project_db
     self.widget_config = self.project_db.widget_config
     self._builder_mode = app.builder_mode
@@ -159,8 +160,8 @@ class WidgetFactory(GObject.Object):
             res.style = res.style.replace(f'#{replacement["name"]}#', replacement["value"])
             res.caption = res.caption.replace(f'#{replacement["name"]}#', replacement["value"])
         params["states"].append({"state": res.state, "style": res.style, "caption": res.caption})
-   
-    return widget_class(self, params)
+    self.widgets[params['id']] = widget_class(self, params)
+    return self.widgets[params['id']]
 
 
   def close_display(self, widget_id):
@@ -174,8 +175,11 @@ class WidgetFactory(GObject.Object):
     return None
 
   def kill_all(self):
-    for display in self.displays:
-        self.displays[display].kill_children()
-        del(self.displays[display])
+    display_dict = self.displays.copy()
+    for display in display_dict:
+      self.displays[display].kill_children()
+      del(self.displays[display])
+    for c in self.app.hmi_layout.get_children():
+      self.app.hmi_layout.remove(c)
 
 

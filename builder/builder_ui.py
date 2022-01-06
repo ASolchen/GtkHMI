@@ -38,7 +38,9 @@ class BuilderLayout(Gtk.Box):
     self.app = app
     self.hmi_layout = app.hmi_layout
     self.build_interface()
+    self.clear_hmi_layout()
     #self.open_database("backend/     mill.db")
+    self.next_temp_id = -1
     self.db_file_path = ""
     #self.active_widget = None #Keeps track of ID of widget which has been clicked on the build panel
     self.widget_highlighted = None  #Keeps track of which widget is currently highlighted on the build panel
@@ -51,17 +53,29 @@ class BuilderLayout(Gtk.Box):
     self.selected_widgets = {}
     self.clipboard = {"widgets": {}}
 
+
   def on_key_press_event(self, window, event):
       if event.keyval == 99: #ctrl-c
         self.clipboard["widgets"] = self.selected_widgets.copy()
-        print(self.clipboard)
       if event.keyval == 118 and len(self.clipboard): #ctrl-v:
         for w in self.clipboard["widgets"]:
+          self.clipboard["widgets"][w].params['x'] += 10
+          self.clipboard["widgets"][w].params['y'] += 10
           params = self.clipboard["widgets"][w].params.copy()
-          params['id'] = 9999999999
-          params['x'] += 10
-          params['y'] += 10
+          params['id'] = self.next_temp_id
+          self.next_temp_id -= 1
           self.app.widget_factory.create_widget(params)
+      if event.keyval == 115: #ctrl-s:
+        self.save_display()
+
+  def save_display(self, *args):
+    pass
+    
+  def load_display(self, display):
+    pass
+
+  def clear_hmi_layout(self, *args):
+    self.app.widget_factory.kill_all()
 
 
   def append_selected(self, widget):
@@ -283,13 +297,6 @@ class BuilderLayout(Gtk.Box):
   def save_db_as(self, button):
     self.save_file(self.db_manager.write_sqlite_db, filter_pattern=["*.db"])
       
-  def get_widgets_display(self, w_id):
-    display = w_id #move up the tree to find the top level widget
-    rows = [{'ParentID': w_id},]
-    while rows[0]["ParentID"] and not rows[0]["ParentID"] == "GLOBAL":
-      w_id = rows[0]["ParentID"]
-      rows = self.db_manager.get_rows("Widgets", ["ParentID"], match_col="ID", match=w_id)
-    return w_id
 
   def get_widgets_rectangle(self, w_id):
     x,y = self.get_widgets_coords_rel_to_display(w_id)
@@ -299,23 +306,6 @@ class BuilderLayout(Gtk.Box):
     for i, val in enumerate(coord_list):
       if val == None: coord_list[i] = 0
     return coord_list
-
-  def get_widgets_coords_rel_to_display(self, w_id):
-    x,y = (0,0)
-    display = w_id #move up the tree to find the top level widget
-    rows = [{'ParentID': w_id},]
-    while rows[0]["ParentID"] and not rows[0]["ParentID"] == "GLOBAL":
-      w_id = rows[0]["ParentID"]
-      new_x,new_y = self.get_widgets_coords(w_id)
-      x,y = (x+new_x, y+new_y)
-      rows = self.db_manager.get_rows("Widgets", ["ParentID"], match_col="ID", match=w_id)
-    return (x,y)
-
-  def get_widgets_coords(self, w_id):
-    coord_res = self.db_manager.get_rows("Widgets", ["X", "Y"], match_col="ID", match=w_id)
-    if not len(coord_res):
-      return (None, None)
-    return (coord_res[0]["X"], coord_res[0]["Y"])
       
   def add_style(self, path):
     #try:
