@@ -160,7 +160,6 @@ class BuilderLayout(Gtk.Box):
       self.settings_panel.show_all()
       return
     if widget:
-      nb = Gtk.Notebook()
       self.settings_panel.add(widget.get_settings_panels()(widget))
       self.settings_panel.show_all()
       return

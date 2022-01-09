@@ -98,12 +98,12 @@ class WidgetSettingsBase(Gtk.Notebook):
     #row 7
     row+=1
     grid.attach(Gtk.Label("parent_id"), 0, row, 1, 1)
-    self.parent_entry = Gtk.Entry(text=self.hmi_widget.parent_id, sensitive=False)
+    self.parent_entry = Gtk.Entry(sensitive=False)
     grid.attach(self.parent_entry, 1, row, 3, 1)
     #row 8
     row+=1 
     grid.attach(Gtk.Label("global_reference"), 0, row, 1, 1)
-    self.global_ref_entry = Gtk.Entry(text=self.hmi_widget.global_reference, sensitive=False)
+    self.global_ref_entry = Gtk.Entry(sensitive=False)
     grid.attach(self.global_ref_entry, 1, row, 3, 1)
     #row 9
     row+=1
@@ -115,7 +115,7 @@ class WidgetSettingsBase(Gtk.Notebook):
     #row 10
     row+=1
     btn = Gtk.Button("Save")
-    #btn.connect("clicked", self.get_params)
+    btn.connect("clicked", lambda btn: self.hmi_widget.save_to_db())
     grid.attach(btn, 0, row, 1, 1)
     self.debug_area = Gtk.TextView(height_request=100, width_request=300)
     self.debug_area.set_wrap_mode(Gtk.WrapMode.WORD)
@@ -123,6 +123,8 @@ class WidgetSettingsBase(Gtk.Notebook):
 
 
   def set_to_widget_vals(self):
+    self.parent_entry.set_text(str(self.hmi_widget.parent_id))
+    self.global_ref_entry.set_text(str(self.hmi_widget.global_reference))
     self.description_entry.set_text(self.hmi_widget.description)
     self.x_spin.set_value(self.hmi_widget.x)
     self.y_spin.set_value(self.hmi_widget.y)
@@ -166,13 +168,25 @@ class Widget(GObject.Object):
     }
     return params
 
-  @GObject.Property(type=int, flags=GObject.ParamFlags.READABLE)
+  @GObject.Property(type=int, flags=GObject.ParamFlags.READWRITE)
   def id(self):
     return self._id
+  @id.setter
+  def id(self, value):
+    old_id = self.id
+    self._id = value
+    if not self.parent == None:
+      self.parent.child_id_changed(old_id, self.id)
+    for child in self.widget_ids:
+      child.parent_id = self.id
   
-  @GObject.Property(type=int, flags=GObject.ParamFlags.READABLE)
+  @GObject.Property(type=int, flags=GObject.ParamFlags.READWRITE)
   def parent_id(self):
     return self._parent_id
+  @parent_id.setter
+  def parent_id(self, value):
+    self._parent_id = value
+
 
   @GObject.Property(type=str, flags=GObject.ParamFlags.READWRITE)
   def description(self):
@@ -232,7 +246,8 @@ class Widget(GObject.Object):
     self._id = params['id'] #read-only
     self._global_reference = params['global_reference'] #read-only
     self._parent_id = params['parent_id']
-    self.parent = params['parent'] #parent widget's layout object. This is what this widget's layout is attached to
+    self.parent = params['parent'] #parent widget if not None
+    self.parent_layout = params['parent_layout'] #parent widget's layout object. This is what this widget's layout is attached to
     self._build_order = 0
     self._x= 0
     self._y= 0
@@ -275,8 +290,8 @@ class Widget(GObject.Object):
     return f'GTK HMI {self.__class__.__name__}: {self.id}'
 
   def move(self):
-    if self.layout in self.parent.get_children():
-      self.parent.move(self.layout, self.x, self.y)
+    if self.layout in self.parent_layout.get_children():
+      self.parent_layout.move(self.layout, self.x, self.y)
   
   def resize(self):
     self.content.set_property("width_request", self.width)
@@ -351,7 +366,7 @@ class Widget(GObject.Object):
     children = list(self.widget_ids)
     for w_id in children:      
       self.widget_ids[w_id].kill_children(level)
-      self.widget_ids[w_id].parent.remove(self.widget_ids[w_id].widget)
+      self.widget_ids[w_id].parent_layout.remove(self.widget_ids[w_id].widget)
       del(self.widget_ids[w_id])
 
 
@@ -401,12 +416,15 @@ class Widget(GObject.Object):
     if not self.styles:
       #If no styles used, apply default class style
       sc.add_class(self.widget_class)
-
-
-    
+  
+  def child_id_changed(self, old_id, new_id):
+    if old_id in self.widget_ids:
+      child = self.widget_ids[old_id]
+      del(self.widget_ids[old_id])
+      self.widget_ids[new_id] = child
 
   def attach_to_parent(self):
-    self.parent.put(self.layout, self.x, self.y)
+    self.parent_layout.put(self.layout, self.x, self.y)
 
   def build_children(self): #from the database
     params = {}
@@ -444,7 +462,8 @@ class Widget(GObject.Object):
           else:
             params.update(w_type.get_params_from_orm(class_res))
         if w_type:
-          params["parent"] = self.layout
+          params["parent_layout"] = self.layout
+          params["parent"] = self
           self.widget_ids[params["id"]] = self.factory.create_widget(params)
 
   def get_widget_by_id(self, id_string):
@@ -520,7 +539,23 @@ class Widget(GObject.Object):
     rect = Gdk.Rectangle(height=h, width=w, x=x, y=y)
     return rect.intersect(self.get_allocated())
 
-
+  def save_to_db(self):
+    entry = self.db_session.query(Widget.orm_model).filter(Widget.orm_model.id == self.id).first()
+    if entry == None:
+      entry = Widget.orm_model()
+    entry.parent_id = self.parent_id
+    entry.widget_class = self.widget_class
+    entry.build_order = self.build_order
+    entry.x = self.x
+    entry.y = self.y
+    entry.width = self.width
+    entry.height = self.height
+    entry.description = self.description
+    entry.global_reference = self.global_reference
+    self.db_session.add(entry)
+    self.db_session.commit()
+    if not self.id == entry.id:
+      self.id = entry.id # if db created this, the widget has a new id
 
 
 

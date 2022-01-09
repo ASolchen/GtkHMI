@@ -1,6 +1,8 @@
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GObject, Gdk
+from gi.repository import Gtk, GObject, Gdk, GdkPixbuf
+from backend.widget_classes.widget import Widget
+from backend.widget_classes.display import DisplayWidget
 
 
 
@@ -8,9 +10,11 @@ from gi.repository import Gtk, GObject, Gdk
 class WidgetExplorer(Gtk.ScrolledWindow):
   def __init__(self, builder_ui):
     Gtk.ScrolledWindow.__init__(self)
+    self.app = builder_ui.app
+    self.db_session = self.app.db_manager.project_db.session
     self.widget_tree_data = {} #stores a list of widget tree iter and ID
-    self.tree_columns = ["ID", "ParentID", "Class"]
-    self.widget_data = Gtk.TreeStore(str, str, str)
+    self.tree_columns = ["Display id", "description"]
+    self.widget_data = Gtk.TreeStore(int, str)
     self.widget_tree = Gtk.TreeView(self.widget_data) # put the list in the Treeview
     self.widget_tree.connect("button_press_event", self.tree_item_clicked)
     self.widget_tree.set_grid_lines(Gtk.TreeViewGridLines.BOTH)
@@ -18,16 +22,21 @@ class WidgetExplorer(Gtk.ScrolledWindow):
       renderer = Gtk.CellRendererText()
       col = Gtk.TreeViewColumn(col_title, renderer, text=i)
       col.set_sort_column_id(i)
-      self.widget_tree.append_column(col)    
+      self.widget_tree.append_column(col)
+    self.add(self.widget_tree)
+    self.build_widget_tree()
+    
 
   def build_widget_tree(self):
     self.widget_data.clear()
-    style_res = self.db_manager.get_rows("ApplicationSettings", ["Stylesheet"])
-    if len(style_res):
-      style_file = style_res[0]["Stylesheet"]
-      self.add_style(style_file)
-    self.get_widgets(None, None)
-    self.get_widgets(None, "GLOBAL")
+    d_res = self.db_session.query(Widget.orm_model).join(DisplayWidget.orm_model)\
+      .filter(Widget.orm_model.id == DisplayWidget.orm_model.id)\
+      .all()
+    for d in d_res:
+      self.widget_data.insert(None, -1, (d.id, d.description))
+    self.show_all()
+    
+
   
   def enable_widgets(self,*args):
     #put items in here want to be enabled after database is opened
@@ -78,7 +87,7 @@ class WidgetExplorer(Gtk.ScrolledWindow):
     elif event.button == 3: #right click
       rect = Gdk.Rectangle()
       rect.x = event.x
-      rect.y = event.y + 10
+      rect.y = event.y + 20
       rect.width = rect.height = 1
       selection = treeview.get_selection()
       tree_model, tree_iter = selection.get_selected()
@@ -87,30 +96,21 @@ class WidgetExplorer(Gtk.ScrolledWindow):
       if tree_iter is None:
         #popover to add display
         add_display_btn = Gtk.ModelButton(label="Add Display",name=None)
-        cb = lambda btn: self.add_display(btn)
-        add_display_btn.connect("clicked", cb)
-        vbox.pack_start(add_display_btn, False, True, 10)
+        add_display_btn.connect("clicked", lambda btn: self.add_display())
+        vbox.pack_start(add_display_btn, False, True, 0)
         #return
       else:
         w_id = tree_model[tree_iter][0]
-        edit_btn = Gtk.ModelButton(label="Edit", name=w_id)
-        cb = lambda btn: self.open_widget_popup(btn)
-        edit_btn.connect("clicked", cb)
-        vbox.pack_start(edit_btn, False, True, 10)
-        class_type = tree_model[tree_iter][2]
-        if class_type == 'display':
-          add_btn = Gtk.ModelButton(label="Add Widget", name=w_id)
-          cb = lambda btn:self.add_widget(btn)
-          add_btn.connect("clicked", cb)
-          vbox.pack_start(add_btn, False, True, 10)
+        open_btn = Gtk.ModelButton(label="Open")
+        dup_btn = Gtk.ModelButton(label="Duplicate")
+        #edit_btn.connect("clicked", cb)
+        for btn in [open_btn, dup_btn]:
+          vbox.pack_start(btn, False, True, 10)
       popover.add(vbox)
       popover.set_position(Gtk.PositionType.RIGHT)
       popover.set_relative_to(treeview)
       popover.set_pointing_to(rect)
       popover.show_all()
-      sc = popover.get_style_context()
-      sc.add_class('popover-bg')
-      sc.add_class('font-16')
       return
     else:
       return
@@ -119,6 +119,8 @@ class WidgetExplorer(Gtk.ScrolledWindow):
     #Rebuild panel with widgets
     if tree_iter is not None:
       w_id = tree_model[tree_iter][0]
-      #self.active_widget = w_id
-      p_id = self.get_widgets_display(w_id)
-      self.refresh_panel(w_id,p_id)
+      self.open_display(w_id)
+
+  def open_display(self, w_id):
+      self.app.widget_factory.kill_all()
+      self.app.widget_factory.open_display(w_id)

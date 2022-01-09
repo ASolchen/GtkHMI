@@ -136,8 +136,9 @@ class ButtonWidget(Widget):
   def label(self, value):
     for c in self.widget.get_children():
       self.widget.remove(c)
-    self._label = value
+    self._label = value 
     self.widget.set_label(value)
+    
 
   @GObject.Property(type=str, flags=GObject.ParamFlags.READWRITE)
   def image(self):
@@ -186,18 +187,19 @@ class ButtonWidget(Widget):
 
   def __init__(self, factory, params):
     self.widget = Gtk.Button()
-    super(ButtonWidget, self).__init__(factory, params)
-    self.resize()
     self._image = ''
     self._on_press = ''
     self._on_release = ''
     self._confirm_on_press_msg = ''
     self._confirm_on_release_msg = ''
     self._label = ''
-    self.btn_active = None      
+    self.btn_active = None
+    #must set advanced params before init of the base params
+    super(ButtonWidget, self).__init__(factory, params)
     self.widget.connect("pressed",self.btn_press_action)
     self.widget.connect("released",self.btn_release_action)
     self.set_styles(self.widget)
+    self.resize()
 
   def initialize_params(self, *args):
     super(ButtonWidget, self).initialize_params()
@@ -253,3 +255,19 @@ class ButtonWidget(Widget):
     if not len(self.on_release):
       return
     exec(self.on_release)
+
+  def save_to_db(self):
+    super(ButtonWidget, self).save_to_db() #save the base settings
+    entry = self.db_session.query(ButtonWidget.orm_model).filter(ButtonWidget.orm_model.id == self.id).first()
+    if entry == None:
+      entry = ButtonWidget.orm_model()
+    entry.id = self.id
+    entry.label = None if not len(self.label) else self.label
+    entry.image = None if not len(self.image) else self.image
+    entry.on_press = None if not len(self.on_press) else self.on_press
+    entry.on_release = None if not len(self.on_release) else self.on_release
+    entry.confirm_on_press_msg = None if not len(self.confirm_on_press_msg) else self.confirm_on_press_msg
+    entry.confirm_on_release_msg = None if not len(self.confirm_on_release_msg) else self.confirm_on_release_msg
+    self.db_session.add(entry)
+    self.db_session.commit()
+

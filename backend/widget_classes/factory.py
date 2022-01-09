@@ -118,7 +118,8 @@ class WidgetFactory(GObject.Object):
         self.displays[display].widget.destroy()
         self.displays[display].shutdown()
         del(self.displays[display])
-      params["parent"] = self.app.hmi_layout
+      params["parent_layout"] = self.app.hmi_layout
+      params["parent"] = None
       id = params["id"]
       self.displays[id] = self.create_widget(params)
       self.displays[id].widget.show_all()
