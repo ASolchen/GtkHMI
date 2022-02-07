@@ -236,7 +236,7 @@ class WidgetDb():
 
 if __name__ == "__main__":
   import os
-  path = '/home/asolchen/Documents/repos/GtkHMI/backend/managers/test_project.db'
+  path = '/home/asolchen/Documents/repos/ProcessView/backend/managers/test_project.db'
   try:
     os.remove(path)
   except:

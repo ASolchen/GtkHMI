@@ -23,12 +23,12 @@
 #
 
 
-class GtkHmiError(Exception):
+class ProcessViewError(Exception):
     """
-    Base exception for all exceptions raised by GtkHMI
+    Base exception for all exceptions raised by ProcessView
     """
 
-class WidgetParamsError(GtkHmiError):
+class WidgetParamsError(ProcessViewError):
   """
   raised on param errors
   """

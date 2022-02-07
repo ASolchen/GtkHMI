@@ -32,7 +32,7 @@ gi.require_version('Gtk', '3.0')
 import re
 import time
 
-from backend.exceptions import GtkHmiError, WidgetParamsError
+from backend.exceptions import ProcessViewError, WidgetParamsError
 from builder.build_mask import BuildMask
 from backend.managers.database_models.widget_database import WidgetParams
 from gi.repository import Gdk, GdkPixbuf, GObject, Gtk

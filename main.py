@@ -34,7 +34,7 @@ if len(sys.argv)>1:
 
 
 win = Gtk.Window()
-win.set_title('GtkHMI')
+win.set_title('ProcessView')
 app = App(win, db)
 win.show_all()
 Gtk.main()
