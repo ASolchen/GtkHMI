@@ -32,14 +32,29 @@ from builder.widget_panels.display_edit_panel import DisplayEditPanel
 from builder.widget_panels.widget_panel import BuilderToolsWidget, AdvancedBuilderToolsWidget
 from builder.widget_panels.popup import WidgetSettingsPopup, ConnectionListWindow, TagsListWindow,CreateWidgetWindow
 
-class BuilderLayout(Gtk.Box):
+class HMI_ALIGNMENT():
+  CENTER = 0
+  LEFT = 1
+  RIGHT = 2
+  MIDDLE = 3
+  TOP = 4
+  BOTTOM = 5
+  CENTER_MIDDLE = 6
+
+
+
+class BuilderLayout(Gtk.Overlay):
   def __init__(self, app):
     super(BuilderLayout, self).__init__()
     self.app = app
+    self.grid_settings = [1,1]
+    self.connect('motion-notify-event', self.mouse_dragged)
     self.hmi_layout = app.hmi_layout
     self.build_interface()
     self.clear_hmi_layout()
-    #self.open_database("backend/     mill.db")
+    self.signals = []
+    event_mask = Gdk.EventMask.BUTTON1_MOTION_MASK
+    self.set_events(event_mask)
     self.next_temp_id = -1
     self.db_file_path = ""
     #self.active_widget = None #Keeps track of ID of widget which has been clicked on the build panel
@@ -53,6 +68,12 @@ class BuilderLayout(Gtk.Box):
     self.selected_widgets = {}
     self.clipboard = {"widgets": {}}
 
+  def mouse_dragged(self, overlay, event):
+    #send to all widget's build mask that are selected
+    rect = self.hmi_layout.get_allocation()
+    for w in self.selected_widgets:
+      pass
+      #self.selected_widgets[w].builder_mask.mouse_dragged(overlay, event, self.grid_settings, (rect.x,rect.y))
 
   def on_key_press_event(self, window, event):
       if event.keyval == 99: #ctrl-c
@@ -80,19 +101,19 @@ class BuilderLayout(Gtk.Box):
 
   def append_selected(self, widget):
     self.selected_widgets[widget.id] = widget
-    widget.builder_mask.select()
+    widget.builder_mask.selected = True
     self.update_settings_panel(None)
   
   def new_selected(self, widget):
     for w in self.selected_widgets:
-      self.selected_widgets[w].builder_mask.deselect()
+      self.selected_widgets[w].builder_mask.selected = False
     self.selected_widgets= {widget.id: widget} #single one
-    widget.builder_mask.select()
+    widget.builder_mask.selected = True
     self.update_settings_panel(widget)
 
   def none_selected(self):
     for w in self.selected_widgets:
-      self.selected_widgets[w].builder_mask.deselect()
+      self.selected_widgets[w].builder_mask.selected = False
     self.selected_widgets= {}
     self.update_settings_panel(None)
 
@@ -119,7 +140,7 @@ class BuilderLayout(Gtk.Box):
     self.conn_button.set_sensitive(False)
     self.nav_button_bar.add(self.conn_button)
 
-    self.tag_button = Gtk.Button(width_request = 40, label="Tags")
+    self.tag_button = Gtk.Button(width_request = 40, label="Displays")
     self.tag_button.connect('clicked',self.setup_tags,None)
     self.tag_button.set_sensitive(False)
     self.nav_button_bar.add(self.tag_button)

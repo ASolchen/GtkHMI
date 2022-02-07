@@ -194,7 +194,7 @@ class ButtonWidget(Widget):
     self._confirm_on_release_msg = ''
     self._label = ''
     self.btn_active = None
-    #must set advanced params before init of the base params
+    #must init advanced params before init of the base params
     super(ButtonWidget, self).__init__(factory, params)
     self.widget.connect("pressed",self.btn_press_action)
     self.widget.connect("released",self.btn_release_action)
