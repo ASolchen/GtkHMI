@@ -161,15 +161,14 @@ class BuilderLayout(Gtk.Overlay):
     menu_box.pack_start(self.menu, 0, 0, 0)
     self.layout.add(menu_box)
     self.add(self.layout)
-    left_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,height_request=(self.size[1]),homogeneous = True)
-    bottom_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+    left_box = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL,height_request=(self.size[1]), wide_handle=True)
+    bottom_box = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL, wide_handle=True)
     self.layout.pack_start(bottom_box,1,1,8)
-    bottom_box.set_spacing(20)
-    left_box.pack_start(left_top_frame,0,1,5)
-    left_box.pack_start(left_bottom_frame,0,1,5)
-    bottom_box.pack_start(left_box,0,1,10)
-    bottom_box.pack_start(right_frame,1,1,10)
-    self.navigator_panel.pack_start(WidgetExplorer(self),1,1,2)
+    left_box.add1(left_top_frame)
+    left_box.add2(left_bottom_frame)
+    bottom_box.add1(left_box)
+    bottom_box.add2(right_frame)
+    #self.navigator_panel.pack_start(WidgetExplorer(self),1,1,2)
 
   
   def update_settings_panel(self, widget,*args):
