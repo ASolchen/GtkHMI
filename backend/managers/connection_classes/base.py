@@ -27,21 +27,21 @@ from typing import Any, Callable, Optional
 
 
 class Connection(object):
-  def __init__(self, connection_manager, idx):
-    self.id = idx
-    self.app = connection_manager.app
-    self.connection_manager = connection_manager
-    self.db_manager = connection_manager.db_manager
-    self.tags = {}
-  
-  def update_tag(self, tag: str, val: Any, timestamp: float=time.time()):
-    dt = self.tags[tag]['DataType']
-    py_type = DATATYPES[dt]['Py_type'] # try to update tag to its python type
-    val = py_type(val)
-    self.tags[tag].update({'Value': val, 'Timestamp': timestamp})
+    def __init__(self, connection_manager, idx):
+        self.id = idx
+        self.app = connection_manager.app
+        self.connection_manager = connection_manager
+        self.db_manager = connection_manager.db_manager
+        self.tags = {}
+    
+    def update_tag(self, tag: str, val: Any, timestamp: float=time.time()):
+        dt = self.tags[tag]['DataType']
+        py_type = DATATYPES[dt]['Py_type'] # try to update tag to its python type
+        val = py_type(val)
+        self.tags[tag].update({'Value': val, 'Timestamp': timestamp})
 
-  def read(self, tags: list)->dict:
-    return {}
+    def read(self, tags: list)->dict:
+        return {}
 
-  def write(self, tag: str, val: Any)->None:
-    return None
+    def write(self, tag: str, val: Any)->None:
+        return None

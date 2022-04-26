@@ -30,4 +30,4 @@ from typing import Any, Callable, Optional
 from backend.managers.connection_classes.base import Connection
 
 class EthernetIP_Connection(Connection):
-  pass
+    pass

@@ -29,50 +29,50 @@ from backend.managers.connection_classes.const import DATATYPES
 
 
 class HMI_Connection(Connection):
-    
-  def read(self, tags: list)->dict:
-    results = {}
-    ts = time.time()
-    for tag in tags:
-      if tag == "Second":
-        results[tag] =  {"Value": time.localtime().tm_sec, "Timestamp": ts, "DataType": "INT"}
-        break
-      if tag == "Minute":
-        results[tag] =  {"Value": time.localtime().tm_min, "Timestamp": ts, "DataType": "INT"}
-        break
-      if tag == "Hour":
-        results[tag] =  {"Value": time.localtime().tm_sec, "Timestamp": ts, "DataType": "INT"}
-        break
-      if tag == "Day":
-        results[tag] =  {"Value": time.localtime().tm_mday, "Timestamp": ts, "DataType": "INT"}
-        break
-      if tag == "Month":
-        results[tag] =  {"Value": time.localtime().tm_mon, "Timestamp": ts, "DataType": "INT"}
-        break
-      if tag == "Year":
-        results[tag] =  {"Value": time.localtime().tm_year, "Timestamp": ts, "DataType": "INT"}
-        break
-      if tag == "blinkSlow":
-        results[tag] =  {"Value": bool((time.localtime().tm_sec / 2)%2), "Timestamp": ts, "DataType": "BOOL"}
-        break
-      if tag == "blinkFast":
-        results[tag] =  {"Value": bool(time.localtime().tm_sec%2), "Timestamp": ts, "DataType": "BOOL"}
-        break
-      if tag in self.tags:
-        results[tag] = self.tags[tag] #dynamic tags?
-        break
-      res = self.connection_manager.db_manager.get_rows("Tags", ["Value", "DataType"], match_col="Tag", match=tag)
-      if len(res):
-        val = DATATYPES[res[0]["DataType"]]["Py_type"](res[0]["Value"])
-        results[tag] = {"Value": val, "Timestamp": ts, "DataType": res[0]["DataType"]}
-    return results
+        
+    def read(self, tags: list)->dict:
+        results = {}
+        ts = time.time()
+        for tag in tags:
+            if tag == "Second":
+                results[tag] =    {"Value": time.localtime().tm_sec, "Timestamp": ts, "DataType": "INT"}
+                break
+            if tag == "Minute":
+                results[tag] =    {"Value": time.localtime().tm_min, "Timestamp": ts, "DataType": "INT"}
+                break
+            if tag == "Hour":
+                results[tag] =    {"Value": time.localtime().tm_sec, "Timestamp": ts, "DataType": "INT"}
+                break
+            if tag == "Day":
+                results[tag] =    {"Value": time.localtime().tm_mday, "Timestamp": ts, "DataType": "INT"}
+                break
+            if tag == "Month":
+                results[tag] =    {"Value": time.localtime().tm_mon, "Timestamp": ts, "DataType": "INT"}
+                break
+            if tag == "Year":
+                results[tag] =    {"Value": time.localtime().tm_year, "Timestamp": ts, "DataType": "INT"}
+                break
+            if tag == "blinkSlow":
+                results[tag] =    {"Value": bool((time.localtime().tm_sec / 2)%2), "Timestamp": ts, "DataType": "BOOL"}
+                break
+            if tag == "blinkFast":
+                results[tag] =    {"Value": bool(time.localtime().tm_sec%2), "Timestamp": ts, "DataType": "BOOL"}
+                break
+            if tag in self.tags:
+                results[tag] = self.tags[tag] #dynamic tags?
+                break
+            res = self.connection_manager.db_manager.get_rows("Tags", ["Value", "DataType"], match_col="Tag", match=tag)
+            if len(res):
+                val = DATATYPES[res[0]["DataType"]]["Py_type"](res[0]["Value"])
+                results[tag] = {"Value": val, "Timestamp": ts, "DataType": res[0]["DataType"]}
+        return results
 
-  def write(self, address: str, val: Any, datatype:[Optional]="REAL")->None:
-    #write a single tag by address to the tag subscriptions
-    tag_update ={self.id:    
-      {address: {"Value": str(val), "Timestamp": time.time(), "DataType": datatype}
-      }
-    }
-    #self.connection_manager.db_manager.update_tag_values(tag_update)
-    self.connection_manager.db_manager.set_tag_val_by_name(address,val)
+    def write(self, address: str, val: Any, datatype:[Optional]="REAL")->None:
+        #write a single tag by address to the tag subscriptions
+        tag_update ={self.id:        
+            {address: {"Value": str(val), "Timestamp": time.time(), "DataType": datatype}
+            }
+        }
+        #self.connection_manager.db_manager.update_tag_values(tag_update)
+        self.connection_manager.db_manager.set_tag_val_by_name(address,val)
 

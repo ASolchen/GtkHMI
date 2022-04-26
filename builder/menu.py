@@ -3,12 +3,12 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GObject, Gdk
 
 def my_print(*args):
-  print(args)
+    print(args)
 
 
 
 class Menu(Gtk.MenuBar):
-  def __init__(self, builder):
+    def __init__(self, builder):
       super(Menu, self).__init__()
       # drop downs
       # file
@@ -177,23 +177,19 @@ class Menu(Gtk.MenuBar):
       help_menu_dropdown = Gtk.MenuItem("Help")
       self.append(help_menu_dropdown)
 
-  def confirm_open_db(self, *args):
-    if len(self.app.db):
-      self.builder.confirm(self.builder.open_database_req, "Close current project and open another?") 
-    else:
-      self.builder.open_database_req()
+    def confirm_open_db(self, *args):
+      if len(self.app.db):
+          self.builder.confirm(self.builder.open_database_req, "Close current project and open another?") 
+      else:
+          self.builder.open_database_req()
 
-  def confirm_create_db(self, *args):
-    if len(self.app.db):
-      self.builder.confirm(self.builder.create_database_req, "Close current project and create new?")
-    else:
-      self.builder.create_database_req()
+    def confirm_create_db(self, *args):
+        if len(self.app.db):
+            self.builder.confirm(self.builder.create_database_req, "Close current project and create new?")
+        else:
+            self.builder.create_database_req()
 
-
-        
-
-
-  def toggle_dark_mode(self, widget):
-      settings = Gtk.Settings.get_default()
-      settings.set_property("gtk-application-prefer-dark-theme",
+    def toggle_dark_mode(self, widget):
+        settings = Gtk.Settings.get_default()
+        settings.set_property("gtk-application-prefer-dark-theme",
                             not settings.get_property("gtk-application-prefer-dark-theme"))

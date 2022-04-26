@@ -30,89 +30,89 @@ from backend.managers.database_models.subscription_database import SubscriptionD
 
 
 class DatabaseManager(GObject.Object):
-  def __init__(self, app):
-    super(DatabaseManager, self).__init__()
-    self.app = app
-    self.subcription_db = SubscriptionDb() #in-memory database for now, could be remote server
-    self.project_db = ProjectDatabase()
-  
-  def open(self, path):
-    self.project_db.open(path)
-  
-  def close_project_db(self):
-    self.project_db.close()
-
-
-  def write_sqlite_db(self, path):
-    pass
-   
-  def get_rows(self, *args):
-    return []
-
-  def copy_table(self,table):
-    pass
-
-  def table_exists(self, table):
-    return False
-  
-  def item_exists(self,table,col,item):
-    return False
-  
-  def get_row_by_id(self, table, match_col=None, match=None, order_by=None, order_desc=False):
-    pass
-
-  def get_tag_id(self, tagname):
-    res = None
-    return res
-
-  def get_tag_val_by_id(self, idx):
-    pass
-
-  def set_tag_val_by_name(self, tag, val):
-    pass
+    def __init__(self, app):
+        super(DatabaseManager, self).__init__()
+        self.app = app
+        self.subcription_db = SubscriptionDb() #in-memory database for now, could be remote server
+        self.project_db = ProjectDatabase()
     
-  def clear_tag_subs(self, subscriber_id):
-    pass
-
-  def add_subscription(self, subscriber_id: str, connection_id: int, tag: str, address: str, datatype:str="REAL"):
-    pass    
+    def open(self, path):
+        self.project_db.open(path)
     
-  def get_sub_vals(self, subscriber_id, tags):
-    tag_dict = {}
-    return tag_dict
+    def close_project_db(self):
+        self.project_db.close()
 
-  def update_tag_values(self, tag_updates: dict):
-    #{1: {'Second': {'DataType': 'INT', 'Timestamp': 1613349742.0320673, 'Value': 22}}
+
+    def write_sqlite_db(self, path):
+        pass
+     
+    def get_rows(self, *args):
+        return []
+
+    def copy_table(self,table):
+        pass
+
+    def table_exists(self, table):
+        return False
     
-    pass
+    def item_exists(self,table,col,item):
+        return False
+    
+    def get_row_by_id(self, table, match_col=None, match=None, order_by=None, order_desc=False):
+        pass
+
+    def get_tag_id(self, tagname):
+        res = None
+        return res
+
+    def get_tag_val_by_id(self, idx):
+        pass
+
+    def set_tag_val_by_name(self, tag, val):
+        pass
+        
+    def clear_tag_subs(self, subscriber_id):
+        pass
+
+    def add_subscription(self, subscriber_id: str, connection_id: int, tag: str, address: str, datatype:str="REAL"):
+        pass        
+        
+    def get_sub_vals(self, subscriber_id, tags):
+        tag_dict = {}
+        return tag_dict
+
+    def update_tag_values(self, tag_updates: dict):
+        #{1: {'Second': {'DataType': 'INT', 'Timestamp': 1613349742.0320673, 'Value': 22}}
+        
+        pass
 
 
-  
-  def ack_all_events(self):
-    pass
-  
-  def ack_sel_events(self,ID):
-    pass
-  
-  def set_db_val_by_id(self, db,column, w_id,val):
-    pass
-  
-  
-  def add_default_param_item(self,table,id_num):
-    pass
-  
-  def add_item_to_table(self, db, columns, val):
-    pass
+    
+    def ack_all_events(self):
+        pass
+    
+    def ack_sel_events(self,ID):
+        pass
+    
+    def set_db_val_by_id(self, db,column, w_id,val):
+        pass
+    
+    
+    def add_default_param_item(self,table,id_num):
+        pass
+    
+    def add_item_to_table(self, db, columns, val):
+        pass
 
-  def add_item_ext_table(self,db, table,columns, val):
-    pass
-  
-  def delete_item_from_table(self, tbl, column, val):
-    pass
+    def add_item_ext_table(self,db, table,columns, val):
+        pass
+    
+    def delete_item_from_table(self, tbl, column, val):
+        pass
  
-  def delete_item_ext_table(self,db, tbl , column, val):
-    #dest_path = "public/mill.db"
-    pass
+    def delete_item_ext_table(self,db, tbl , column, val):
+        #dest_path = "public/mill.db"
+        pass
 
 
 

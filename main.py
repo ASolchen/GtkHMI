@@ -30,7 +30,7 @@ from app import App
 
 db = ''
 if len(sys.argv)>1:
-  db = sys.argv[1]
+    db = sys.argv[1]
 
 
 win = Gtk.Window()

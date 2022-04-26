@@ -29,44 +29,44 @@ import time, ast
 from backend.widget_classes.widget import Widget
 
 class StateIndicationWidget(Widget):
-  #NEED TO BUILD UPDATE CLASS METHOD
-  def build(self):
-    rows = self.db_manager.get_rows("WidgetParams-state-display",
-        ["ValueTag"], "WidgetID", self.id)
-    try:
-      self.substitute_replacements(self.replacements, rows[0])
-      self.substitute_replacements(self.replacements, rows[0])
-      self.initialState = rows[0]["ValueTag"] #TODO remove from here and db
-    except (IndexError, KeyError):
-      event_msg = "StateIndicationWidget {} path lookup error".format(self.id)
-      self.app.display_event(event_msg)
+    #NEED TO BUILD UPDATE CLASS METHOD
+    def build(self):
+        rows = self.db_manager.get_rows("WidgetParams-state-display",
+                ["ValueTag"], "WidgetID", self.id)
+        try:
+            self.substitute_replacements(self.replacements, rows[0])
+            self.substitute_replacements(self.replacements, rows[0])
+            self.initialState = rows[0]["ValueTag"] #TODO remove from here and db
+        except (IndexError, KeyError):
+            event_msg = "StateIndicationWidget {} path lookup error".format(self.id)
+            self.app.display_event(event_msg)
 
-    self.widget = Gtk.Label(width_request=self.width, height_request=(self.height))
-    self.widget.set_property("xalign", 0.5)
-    for state in self.states:
-      if state["State"] != None:
-        self.widget.set_text(state["Caption"])
-    self.set_styles(self.widget)
+        self.widget = Gtk.Label(width_request=self.width, height_request=(self.height))
+        self.widget.set_property("xalign", 0.5)
+        for state in self.states:
+            if state["State"] != None:
+                self.widget.set_text(state["Caption"])
+        self.set_styles(self.widget)
 
-  def animate_state(self, val):
-    lbl_sc = self.widget.get_style_context()
-    found = False
-    for state in self.states:
-      if type(val) != type(None):
-        val = int(val)
-        if val == state["State"]:
-          found = True
-    if not found:
-      val = None
-    match_state = None
-    for state in self.states:
-      if type(val) != type(None):
-        val = int(val)
-      if val == state["State"]:
-        match_state = state
-      else:
-        lbl_sc.remove_class(state["Style"])
-    if match_state:
-      lbl_sc.add_class(match_state["Style"])
-      self.widget.set_text(match_state["Caption"])
+    def animate_state(self, val):
+        lbl_sc = self.widget.get_style_context()
+        found = False
+        for state in self.states:
+            if type(val) != type(None):
+                val = int(val)
+                if val == state["State"]:
+                    found = True
+        if not found:
+            val = None
+        match_state = None
+        for state in self.states:
+            if type(val) != type(None):
+                val = int(val)
+            if val == state["State"]:
+                match_state = state
+            else:
+                lbl_sc.remove_class(state["Style"])
+        if match_state:
+            lbl_sc.add_class(match_state["Style"])
+            self.widget.set_text(match_state["Caption"])
 

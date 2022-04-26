@@ -30,29 +30,29 @@ import time
 from backend.widget_classes.widget import Widget
 
 class StringDisplayWidget(Widget):
-  def build(self):
-    rows = self.db_manager.get_rows("WidgetParams-str-display",
-        ["InitialStr","Tag"], "WidgetID", self.id)
-    try:
-      self.substitute_replacements(self.replacements, rows[0])
-      self.placeholder = rows[0]["InitialStr"]
-      self.tag = rows[0]["Tag"]
-    except (IndexError, KeyError):
-      event_msg = "StringDisplayWidget {} path lookup error".format(self.id)
-      self.app.display_event(event_msg)
-    #add color animations to border
-    self.widget = Gtk.Label(width_request=self.width, height_request=self.height)
-    if not self.placeholder:
-      self.placeholder = "-Unknown-"
-    self.widget.set_property("xalign", 0.5)
-    self.widget.set_text(self.placeholder)
-    self.set_styles(self.widget)
+    def build(self):
+        rows = self.db_manager.get_rows("WidgetParams-str-display",
+                ["InitialStr","Tag"], "WidgetID", self.id)
+        try:
+            self.substitute_replacements(self.replacements, rows[0])
+            self.placeholder = rows[0]["InitialStr"]
+            self.tag = rows[0]["Tag"]
+        except (IndexError, KeyError):
+            event_msg = "StringDisplayWidget {} path lookup error".format(self.id)
+            self.app.display_event(event_msg)
+        #add color animations to border
+        self.widget = Gtk.Label(width_request=self.width, height_request=self.height)
+        if not self.placeholder:
+            self.placeholder = "-Unknown-"
+        self.widget.set_property("xalign", 0.5)
+        self.widget.set_text(self.placeholder)
+        self.set_styles(self.widget)
 
-  def class_update(self, factory, subscriber):
-    if self.display != subscriber:
-      return
-    expression_val = self.connection_manager.evaluate_expression(self, self.tag, self.display)
-    self.expression_err |= expression_val is None
-    if type(expression_val) == type(None):
-      expression_val = "----"
-    self.widget.set_text("{}".format(expression_val))
+    def class_update(self, factory, subscriber):
+        if self.display != subscriber:
+            return
+        expression_val = self.connection_manager.evaluate_expression(self, self.tag, self.display)
+        self.expression_err |= expression_val is None
+        if type(expression_val) == type(None):
+            expression_val = "----"
+        self.widget.set_text("{}".format(expression_val))

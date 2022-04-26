@@ -29,6 +29,6 @@ class ProcessViewError(Exception):
     """
 
 class WidgetParamsError(ProcessViewError):
-  """
-  raised on param errors
-  """
+    """
+    raised on param errors
+    """

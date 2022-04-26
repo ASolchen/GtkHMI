@@ -15,29 +15,29 @@ from sqlalchemy.sql.sqltypes import Float, Numeric
 SubscriptionBase = declarative_base()
 
 class ValuesTable(SubscriptionBase): # this table holds all tag values being subscribed to
-  __tablename__ = 'values'
-  id = Column(Integer, primary_key=True)
-  value = Column(String)
-  timestamp = Column(Float)
-  datatype = Column(String)
+    __tablename__ = 'values'
+    id = Column(Integer, primary_key=True)
+    value = Column(String)
+    timestamp = Column(Float)
+    datatype = Column(String)
 
 class Subsciptions(SubscriptionBase): # this table holds all tag values being subscribed to
-  __tablename__ = 'subscriptions'
-  id = Column(Integer, primary_key=True)
-  value_id = Column(Integer, ForeignKey(ValuesTable.id))
-  widget_id = Column(Integer)
-  tag_id = Column(String) #in [Connection]Tag e.g. [PLC1]SomeTag
+    __tablename__ = 'subscriptions'
+    id = Column(Integer, primary_key=True)
+    value_id = Column(Integer, ForeignKey(ValuesTable.id))
+    widget_id = Column(Integer)
+    tag_id = Column(String) #in [Connection]Tag e.g. [PLC1]SomeTag
 
 class SubscriptionDb():
-  def __init__(self) -> None:
-    self.models = {
-      "values": ValuesTable,
-    }
-    engine = create_engine('sqlite:///:memory:') #should create a .db file next to this one
-    res = SubscriptionBase.metadata.create_all(engine) #creates all the tables above
-    Session = sessionmaker(bind=engine)
-    self.session = Session()
+    def __init__(self) -> None:
+        self.models = {
+            "values": ValuesTable,
+        }
+        engine = create_engine('sqlite:///:memory:') #should create a .db file next to this one
+        res = SubscriptionBase.metadata.create_all(engine) #creates all the tables above
+        Session = sessionmaker(bind=engine)
+        self.session = Session()
 
-  def close(self, *args):
-    self.session.close()
+    def close(self, *args):
+        self.session.close()
 

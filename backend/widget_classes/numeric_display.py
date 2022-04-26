@@ -30,82 +30,82 @@ import time
 from backend.widget_classes.widget import Widget
 
 class NumericDisplayWidget(Widget):
-  #add restrictions if the number is to be integer / floating point / how many decimal places required
-  def build(self):    
-    dispay_rows = self.db_manager.get_rows("WidgetParams-num-display",
-        ["InitialNum","ValueTag","ColorScheme"], "WidgetID", self.id)
-    format_rows = self.db_manager.get_rows("WidgetParams-num-format",
-        ["Format",	"LeftPadding", "Decimals"], "WidgetID", self.id)
-    if not len(format_rows):
-      format_rows.append({"Format": "Integer",
-                          "LeftPadding": 0,
-                          "Decimals": 0},) #use some defaults
-    try:
-      self.substitute_replacements(self.replacements, dispay_rows[0])
-      self.init_num = dispay_rows[0].get("InitialNum", "**.**")
-      self.indication = dispay_rows[0].get("ValueTag")
-      self.color_scheme = dispay_rows[0].get("ColorScheme") 
-      self.substitute_replacements(self.replacements, format_rows[0])
-      self.num_format = format_rows[0].get("Format", "Integer")
-      self.left_padding = format_rows[0].get("LeftPadding", 0)
-      self.decimals = format_rows[0].get("Decimals",0)      
-    except (IndexError, KeyError):
-      event_msg = "NumericDisplayWidget {} path lookup error".format(self.id)
-      self.app.display_event(event_msg)
-    
-    self.widget = Gtk.Fixed(width_request=self.width, height_request=self.height)
-    self.lbl = Gtk.Label(width_request=self.width, height_request=self.height)
-    self.widget.put(self.lbl,0,0)
-    if not self.init_num:
-      self.init_num = "-Unknown-"
-    self.lbl.set_property("xalign", 0.5)
-    self.lbl.set_text(self.init_num)
-    self.set_styles(self.lbl)
+    #add restrictions if the number is to be integer / floating point / how many decimal places required
+    def build(self):        
+        dispay_rows = self.db_manager.get_rows("WidgetParams-num-display",
+                ["InitialNum","ValueTag","ColorScheme"], "WidgetID", self.id)
+        format_rows = self.db_manager.get_rows("WidgetParams-num-format",
+                ["Format",	"LeftPadding", "Decimals"], "WidgetID", self.id)
+        if not len(format_rows):
+            format_rows.append({"Format": "Integer",
+                                                    "LeftPadding": 0,
+                                                    "Decimals": 0},) #use some defaults
+        try:
+            self.substitute_replacements(self.replacements, dispay_rows[0])
+            self.init_num = dispay_rows[0].get("InitialNum", "**.**")
+            self.indication = dispay_rows[0].get("ValueTag")
+            self.color_scheme = dispay_rows[0].get("ColorScheme") 
+            self.substitute_replacements(self.replacements, format_rows[0])
+            self.num_format = format_rows[0].get("Format", "Integer")
+            self.left_padding = format_rows[0].get("LeftPadding", 0)
+            self.decimals = format_rows[0].get("Decimals",0)            
+        except (IndexError, KeyError):
+            event_msg = "NumericDisplayWidget {} path lookup error".format(self.id)
+            self.app.display_event(event_msg)
+        
+        self.widget = Gtk.Fixed(width_request=self.width, height_request=self.height)
+        self.lbl = Gtk.Label(width_request=self.width, height_request=self.height)
+        self.widget.put(self.lbl,0,0)
+        if not self.init_num:
+            self.init_num = "-Unknown-"
+        self.lbl.set_property("xalign", 0.5)
+        self.lbl.set_text(self.init_num)
+        self.set_styles(self.lbl)
 
 
-  def class_update(self, factory, subscriber):
-    if self.display != subscriber:
-      return
-    expression_val = self.connection_manager.evaluate_expression(self, self.indication, self.display)
-    self.expression_err |= expression_val is None
-    if type(expression_val) == type(None):
-      expression_val = "**.**"
-      self.expression_err = True
-      return
-    if self.num_format == "Float":
-      text = ""
-      dec = "" if type(self.decimals) == type(None) else int(self.decimals)
-      pad = "" if type(self.left_padding) == type(None) else int(self.left_padding)
-      line = """text = '{:"""+str(pad)+"."+str(dec)+"""f}'.format(expression_val)"""
-      locs = locals()
-      exec(line, globals(), locs)
-      text = locs["text"]
-      if pad:
-        sign = ""
-        if text.startswith("-"):
-          sign = text[0]
-          text = text[1:]
-        whole_len = len(text.split(".")[0])
-        add_chars = pad - whole_len
-        if add_chars > 0:
-          text = text.rjust(len(text)+add_chars, "0")
-        text = sign + text
-      self.lbl.set_text(text)
-      return
-    if self.num_format == "Hex":
-      self.lbl.set_text("0x{:X}".format(expression_val))
-      return
-    if self.num_format == "Integer":
-      pad = "" if type(self.left_padding) == type(None) else int(self.left_padding)
-      self.lbl.set_text("{}".format(int(expression_val)))
-      if pad:
-        whole_len = len(text)
-        add_chars = pad - whole_len
-        if add_chars > 0:
-          text = text.rjust(len(text)+add_chars, "0")
-      return
-    #No formatting, let python decide
-    self.lbl.set_text("{}".format(expression_val))
+    def class_update(self, factory, subscriber):
+        if self.display != subscriber:
+            return
+        expression_val = self.connection_manager.evaluate_expression(self, self.indication, self.display)
+        self.expression_err |= expression_val is None
+        if type(expression_val) == type(None):
+            expression_val = "**.**"
+            self.expression_err = True
+            return
+        if self.num_format == "Float":
+            text = ""
+            dec = "" if type(self.decimals) == type(None) else int(self.decimals)
+            pad = "" if type(self.left_padding) == type(None) else int(self.left_padding)
+            line = """text = '{:"""+str(pad)+"."+str(dec)+"""f}'.format(expression_val)"""
+            locs = locals()
+            exec(line, globals(), locs)
+            text = locs["text"]
+            if pad:
+                sign = ""
+                if text.startswith("-"):
+                    sign = text[0]
+                    text = text[1:]
+                whole_len = len(text.split(".")[0])
+                add_chars = pad - whole_len
+                if add_chars > 0:
+                    text = text.rjust(len(text)+add_chars, "0")
+                text = sign + text
+            self.lbl.set_text(text)
+            return
+        if self.num_format == "Hex":
+            self.lbl.set_text("0x{:X}".format(expression_val))
+            return
+        if self.num_format == "Integer":
+            pad = "" if type(self.left_padding) == type(None) else int(self.left_padding)
+            self.lbl.set_text("{}".format(int(expression_val)))
+            if pad:
+                whole_len = len(text)
+                add_chars = pad - whole_len
+                if add_chars > 0:
+                    text = text.rjust(len(text)+add_chars, "0")
+            return
+        #No formatting, let python decide
+        self.lbl.set_text("{}".format(expression_val))
 
 
-    
+        

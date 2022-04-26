@@ -30,75 +30,75 @@ import time
 from backend.widget_classes.widget import Widget
 
 class CheckBoxWidget(Widget):
-  def build(self):
-    rows = self.db_manager.get_rows("WidgetParams-check-box",
-        ["ValueTag","OnChange","InitialTag"], "WidgetID", self.id)
-    try:
-      self.substitute_replacements(self.replacements, rows[0])
-      self.value_tag = rows[0]["ValueTag"] #TODO remove from here and db
-      self.on_change_cmd = rows[0]["OnChange"]
-      self.initialTag = rows[0]["InitialTag"]
-    except (IndexError, KeyError):
-      event_msg = "CheckBoxWidget {} path lookup error".format(self.id)
-      self.app.display_event(event_msg)
+    def build(self):
+        rows = self.db_manager.get_rows("WidgetParams-check-box",
+                ["ValueTag","OnChange","InitialTag"], "WidgetID", self.id)
+        try:
+            self.substitute_replacements(self.replacements, rows[0])
+            self.value_tag = rows[0]["ValueTag"] #TODO remove from here and db
+            self.on_change_cmd = rows[0]["OnChange"]
+            self.initialTag = rows[0]["InitialTag"]
+        except (IndexError, KeyError):
+            event_msg = "CheckBoxWidget {} path lookup error".format(self.id)
+            self.app.display_event(event_msg)
 
-    self.widget =Gtk.ToggleButton(width_request=self.width, height_request=self.height)
-    self.widget.connect("toggled", self.on_change)
-    self.set_styles(self.widget)
-    img = GdkPixbuf.Pixbuf.new_from_file_at_size('./Public/images/Check.png', self.width, self.height)
-    self.img_checked = Gtk.Image.new_from_pixbuf(img)
-    self.initial_val = ''
-    self.set_initial_val()
+        self.widget =Gtk.ToggleButton(width_request=self.width, height_request=self.height)
+        self.widget.connect("toggled", self.on_change)
+        self.set_styles(self.widget)
+        img = GdkPixbuf.Pixbuf.new_from_file_at_size('./Public/images/Check.png', self.width, self.height)
+        self.img_checked = Gtk.Image.new_from_pixbuf(img)
+        self.initial_val = ''
+        self.set_initial_val()
 
-  def class_update(self, factory, subscriber):
-    if self.display != subscriber:
-      return
+    def class_update(self, factory, subscriber):
+        if self.display != subscriber:
+            return
 
-  def set_initial_val(self,*args):
-    expression_val = self.connection_manager.evaluate_expression(self, self.initialTag, self.display)
-    if expression_val != None:
-      self.initial_val = expression_val
-      self.widget.set_active(bool(expression_val))
-      if expression_val:
-        self.widget.add(self.img_checked)
-  
-  def update_img(self,*args):
-    temp = self.widget.get_children()
-    for i in temp:
-      self.widget.remove(i)
-    if self.widget.get_active():
-      self.widget.add(self.img_checked)
-      self.widget.show_all()
+    def set_initial_val(self,*args):
+        expression_val = self.connection_manager.evaluate_expression(self, self.initialTag, self.display)
+        if expression_val != None:
+            self.initial_val = expression_val
+            self.widget.set_active(bool(expression_val))
+            if expression_val:
+                self.widget.add(self.img_checked)
+    
+    def update_img(self,*args):
+        temp = self.widget.get_children()
+        for i in temp:
+            self.widget.remove(i)
+        if self.widget.get_active():
+            self.widget.add(self.img_checked)
+            self.widget.show_all()
 
-  def on_change(self,*args):
-    if self.builder_mode:
-      return
-    if not self.initial_val:  # prevents updating db with already saved Value
-      self.update_img()
-      self.run_cmd()
-    self.initial_val = ''
+    def on_change(self,*args):
+        if self.builder_mode:
+            return
+        if not self.initial_val:    # prevents updating db with already saved Value
+            self.update_img()
+            self.run_cmd()
+        self.initial_val = ''
 
-  def return_status(self,*args):
-    return self.widget.get_active()
-  
-  def run_cmd(self,*args):
-    cmd = self.on_change_cmd
-    if cmd:
-      try:
-        exec(cmd)
-      except Exception as e:
-        event_msg = 'Error on widget id "{}"\n\tCommand: {}\n\tError: {}'.format(self.id, cmd, e)
-        self.app.display_event(event_msg)
+    def return_status(self,*args):
+        return self.widget.get_active()
+    
+    def run_cmd(self,*args):
+        cmd = self.on_change_cmd
+        if cmd:
+            try:
+                exec(cmd)
+            except Exception as e:
+                event_msg = 'Error on widget id "{}"\n\tCommand: {}\n\tError: {}'.format(self.id, cmd, e)
+                self.app.display_event(event_msg)
 
-  
-  def animate_state(self, val):
-    #override this in child classes if needed
-    for state in self.states:
-      sc = self.widget.get_style_context()
-      if type(val) != type(None): val = int(val)
-      if val == state["State"]:
-        sc.add_class(state["Style"])
-        if state["Caption"]:
-          self.widget.set_label(state["Caption"])
-      else:
-        sc.remove_class(state["Style"])
+    
+    def animate_state(self, val):
+        #override this in child classes if needed
+        for state in self.states:
+            sc = self.widget.get_style_context()
+            if type(val) != type(None): val = int(val)
+            if val == state["State"]:
+                sc.add_class(state["Style"])
+                if state["Caption"]:
+                    self.widget.set_label(state["Caption"])
+            else:
+                sc.remove_class(state["Style"])

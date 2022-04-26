@@ -27,4 +27,4 @@ from backend.managers.connection_classes.base import Connection
 
 #Beckhoff TWinCAT ADS
 class ADS_Connection(Connection):
-  pass
+    pass

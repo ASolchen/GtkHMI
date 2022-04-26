@@ -30,36 +30,36 @@ import time
 from backend.widget_classes.widget import Widget
 
 class LabelWidget(Widget):
-  def build(self):
-    rows = self.db_manager.get_rows("WidgetParams-label",
-        ["LabelText", "Justify"], "WidgetID", self.id)
-    try:
-      self.substitute_replacements(self.replacements, rows[0])
-      self.label_text = rows[0]["LabelText"] 
-      self.text_justify = rows[0].get("Justify", "CENTER") 
-    except (IndexError, KeyError):
-      event_msg = "LabelWidget {} path lookup error".format(self.id)
-      self.app.display_event(event_msg)
-    
-    self.widget = Gtk.Label(width_request=self.width, height_request=self.height)
-    _justify = {"LEFT": 0.0, "CENTER": 0.5, "RIGHT": 1.0}
-    x_align = 0.5
-    if self.text_justify in _justify:
-      x_align = _justify.get(self.text_justify, 0.5)
-    self.widget.set_property("xalign", x_align)
+    def build(self):
+        rows = self.db_manager.get_rows("WidgetParams-label",
+                ["LabelText", "Justify"], "WidgetID", self.id)
+        try:
+            self.substitute_replacements(self.replacements, rows[0])
+            self.label_text = rows[0]["LabelText"] 
+            self.text_justify = rows[0].get("Justify", "CENTER") 
+        except (IndexError, KeyError):
+            event_msg = "LabelWidget {} path lookup error".format(self.id)
+            self.app.display_event(event_msg)
+        
+        self.widget = Gtk.Label(width_request=self.width, height_request=self.height)
+        _justify = {"LEFT": 0.0, "CENTER": 0.5, "RIGHT": 1.0}
+        x_align = 0.5
+        if self.text_justify in _justify:
+            x_align = _justify.get(self.text_justify, 0.5)
+        self.widget.set_property("xalign", x_align)
 
-    self.widget.set_text(self.label_text)
-    self.set_styles(self.widget)
+        self.widget.set_text(self.label_text)
+        self.set_styles(self.widget)
 
-  def animate_state(self, val):
-    super(LabelWidget, self).animate_state(val)
-    
-    if self.builder_mode:
-      return
-    #override this in child classes if needed
-    for state in self.states:
-      if state["Caption"]:
-        if type(val) != type(None): 
-          val = int(val)
-        if val == state["State"]:
-          self.widget.set_text(state["Caption"])
+    def animate_state(self, val):
+        super(LabelWidget, self).animate_state(val)
+        
+        if self.builder_mode:
+            return
+        #override this in child classes if needed
+        for state in self.states:
+            if state["Caption"]:
+                if type(val) != type(None): 
+                    val = int(val)
+                if val == state["State"]:
+                    self.widget.set_text(state["Caption"])
